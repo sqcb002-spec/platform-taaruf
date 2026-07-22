@@ -78,7 +78,7 @@ export default function Home() {
             pihak.
           </p>
           <div className="hero-actions">
-            <Link className="btn btn-lg" href="/dashboard">
+            <Link className="btn btn-lg" href="/daftar">
               Mulai dengan biodata <ArrowRight size={19} />
             </Link>
             <a className="text-link" href="#proses">
@@ -213,7 +213,7 @@ export default function Home() {
                 <p>{stage.text}</p>
                 <span>{stage.note}</span>
               </div>
-                <div className="stage-visual" aria-hidden="true">
+              <div className="stage-visual" aria-hidden="true">
                 <i />
                 <i />
                 <i />
