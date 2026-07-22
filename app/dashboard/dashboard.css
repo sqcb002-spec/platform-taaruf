@@ -830,6 +830,60 @@
   font-size: 0.78rem;
   line-height: 1.6;
 }
+
+.dashboard-error-state {
+  min-height: 440px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  padding: clamp(32px, 7vw, 80px);
+  border: 1px solid var(--color-rule);
+  border-radius: 24px;
+  background: var(--color-paper);
+  text-align: center;
+}
+
+.app-error-page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 4vw, 48px);
+  background: var(--color-paper-2);
+}
+
+.app-error-page .dashboard-error-state {
+  width: min(760px, 100%);
+}
+
+.dashboard-error-state h1,
+.dashboard-error-state p {
+  max-width: 620px;
+  margin: 0;
+}
+
+.dashboard-error-state > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.dashboard-error-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--color-accent-deep);
+  background: var(--color-coral-soft);
+}
+
+.dashboard-error-icon svg {
+  width: 24px;
+  height: 24px;
+}
 @media (hover: hover) and (pointer: fine) {
   .app-nav a:hover {
     background: color-mix(in oklch, var(--color-paper) 7%, transparent);

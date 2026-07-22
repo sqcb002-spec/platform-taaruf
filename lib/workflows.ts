@@ -1,5 +1,5 @@
 import { and, count, eq, inArray, or } from "drizzle-orm";
-import { db } from "@/db";
+import { transactionalDb as db } from "@/db";
 import {
   auditLogs,
   consents,

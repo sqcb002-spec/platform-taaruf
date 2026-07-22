@@ -16,7 +16,7 @@ import {
   SlidersHorizontal,
   Users,
 } from "lucide-react";
-import type { AppRole } from "@/lib/roles";
+import type { AppRole } from "./roles";
 
 export type NavItem = {
   label: string;

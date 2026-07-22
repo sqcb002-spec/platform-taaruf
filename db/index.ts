@@ -1,4 +1,6 @@
+import { neon } from "@neondatabase/serverless";
 import postgres from "postgres";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { drizzle } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 
@@ -17,9 +19,14 @@ function pooledNeonUrl(value: string) {
   return url.toString();
 }
 
-// The VPS has reliable direct PostgreSQL connectivity, while long-lived Neon
-// WebSocket connections can intermittently time out behind the host network.
-// Use Neon's transaction pooler and keep the local pool deliberately small.
+// User-facing reads and writes go through Neon's stateless HTTP driver. This
+// avoids keeping fragile database sockets open on the VPS and handles compute
+// wake-ups more reliably for auth/session and dashboard requests.
+const httpClient = neon(connectionString);
+export const db = drizzleNeon(httpClient, { schema });
+
+// Multi-step domain workflows still require interactive transactions. Route
+// only those operations through Neon's pooler and keep the pool small.
 const client = postgres(pooledNeonUrl(connectionString), {
   ssl: "require",
   max: 5,
@@ -28,4 +35,4 @@ const client = postgres(pooledNeonUrl(connectionString), {
   prepare: false,
 });
 
-export const db = drizzle(client, { schema });
+export const transactionalDb = drizzle(client, { schema });
