@@ -1,0 +1,45 @@
+{
+  "name": "platform-taaruf",
+  "version": "1.0.0",
+  "description": "Platform ta'aruf digital yang dirancang untuk memfasilitasi proses menuju pernikahan dengan alur terarah, keterlibatan wali, pendampingan mediator, dan perlindungan data pribadi.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hmad28/platform-taaruf.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hmad28/platform-taaruf/issues"
+  },
+  "homepage": "https://github.com/hmad28/platform-taaruf#readme",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
+    "lucide-react": "^1.25.0",
+    "next": "^16.2.11",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "resend": "^6.18.0",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.2.11",
+    "typescript": "^6.0.3"
+  }
+}
