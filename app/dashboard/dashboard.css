@@ -1056,3 +1056,146 @@
     overflow-y: auto;
   }
 }
+
+/* Restrained interaction layer: tactile without making a serious flow playful. */
+.app-nav a,
+.signout,
+.notification-button,
+.user-menu,
+.app-primary,
+.app-secondary,
+.metric-grid article,
+.dashboard-card,
+.queue-card,
+.form-card,
+.section-progress,
+.section-progress > a,
+.document-upload,
+.profile-form input,
+.profile-form select,
+.profile-form textarea {
+  transition:
+    transform var(--dur-short) var(--ease-out),
+    color var(--dur-short) var(--ease-out),
+    background-color var(--dur-short) var(--ease-out),
+    border-color var(--dur-short) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
+}
+
+.signout,
+.user-menu {
+  border-radius: 0.75rem;
+}
+
+.user-menu {
+  padding: 0.3rem;
+}
+
+.data-sync-notice {
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1px solid color-mix(in oklch, var(--color-coral) 52%, var(--color-rule));
+  border-radius: 1rem;
+  background: var(--color-coral-soft);
+  animation: dashboard-enter 360ms var(--ease-out) both;
+}
+
+.data-sync-notice > svg {
+  width: 1.2rem;
+  flex: 0 0 auto;
+  color: var(--color-accent-deep);
+}
+
+.data-sync-notice p {
+  margin: 0.25rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.app-content > * {
+  animation: dashboard-enter 420ms var(--ease-out) both;
+}
+.app-content > *:nth-child(2) { animation-delay: 45ms; }
+.app-content > *:nth-child(3) { animation-delay: 90ms; }
+.app-content > *:nth-child(4) { animation-delay: 135ms; }
+
+@keyframes dashboard-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .app-nav a:hover {
+    transform: translateX(3px);
+  }
+  .app-primary:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 var(--color-accent-deep);
+  }
+  .app-primary:not(:disabled):active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 var(--color-accent-deep);
+  }
+  .app-secondary:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-accent);
+    background: var(--color-cyan-soft);
+    box-shadow: 0 8px 22px color-mix(in oklch, var(--color-ink) 8%, transparent);
+  }
+  .metric-grid article:hover,
+  .dashboard-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in oklch, var(--color-accent) 45%, var(--color-rule));
+    box-shadow: 0 14px 34px color-mix(in oklch, var(--color-ink) 8%, transparent);
+  }
+  .section-progress > a:hover {
+    transform: translateX(3px);
+    background: var(--color-paper-2);
+  }
+  .document-upload:not(.uploading):hover {
+    transform: translateY(-2px);
+    border-color: var(--color-accent);
+    background: var(--color-cyan-soft);
+    box-shadow: 0 10px 24px color-mix(in oklch, var(--color-ink) 7%, transparent);
+  }
+  .profile-form input:hover,
+  .profile-form select:hover,
+  .profile-form textarea:hover {
+    border-color: color-mix(in oklch, var(--color-accent) 45%, var(--color-rule));
+  }
+  .notification-button:hover {
+    transform: translateY(-2px) rotate(-4deg);
+    border-color: var(--color-accent);
+    background: var(--color-cyan-soft);
+  }
+  .user-menu:hover {
+    background: var(--color-paper-2);
+  }
+  .signout:not(:disabled):hover {
+    transform: translateX(3px);
+    color: var(--color-paper);
+    background: color-mix(in oklch, var(--color-paper) 7%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-content > *,
+  .data-sync-notice {
+    animation: none !important;
+  }
+  .app-nav a,
+  .app-primary,
+  .app-secondary,
+  .metric-grid article,
+  .dashboard-card,
+  .section-progress > a,
+  .document-upload,
+  .notification-button,
+  .signout {
+    transition: none !important;
+  }
+}

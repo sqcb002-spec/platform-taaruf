@@ -153,6 +153,16 @@ a {
 button {
   font: inherit;
 }
+button:not(:disabled) {
+  cursor: pointer;
+}
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
 button:disabled,
 a[aria-disabled="true"] {
   opacity: 0.55;

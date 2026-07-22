@@ -30,7 +30,7 @@ export default function DashboardError({
         <button type="button" className="app-primary" onClick={reset}>
           <RotateCcw /> Coba lagi
         </button>
-        <Link href="/dashboard" className="app-secondary">
+        <Link href="/dashboard" className="app-secondary" prefetch={false}>
           <House /> Kembali ke ringkasan
         </Link>
       </div>

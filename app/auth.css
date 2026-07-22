@@ -94,6 +94,15 @@
   background: color-mix(in oklch, var(--color-paper) 80%, white);
   color: var(--color-ink);
   outline: none;
+  transition:
+    border-color var(--dur-short) var(--ease-out),
+    background-color var(--dur-short) var(--ease-out),
+    box-shadow var(--dur-short) var(--ease-out);
+}
+.auth-form input:hover,
+.auth-form select:hover {
+  border-color: color-mix(in oklch, var(--color-accent) 48%, var(--color-rule));
+  background: var(--color-paper);
 }
 .auth-form input:focus {
   border-color: var(--color-focus);
@@ -139,6 +148,19 @@
   color: var(--color-accent-ink);
   font-weight: 800;
   box-shadow: 0 5px 0 var(--color-accent-deep);
+  transition:
+    transform var(--dur-short) var(--ease-out),
+    box-shadow var(--dur-short) var(--ease-out),
+    background-color var(--dur-short) var(--ease-out);
+}
+.auth-submit:not(:disabled):hover {
+  transform: translateY(-2px);
+  background: color-mix(in oklch, var(--color-accent) 90%, var(--color-cyan));
+  box-shadow: 0 7px 0 var(--color-accent-deep);
+}
+.auth-submit:not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--color-accent-deep);
 }
 .auth-submit svg {
   width: 1.1rem;

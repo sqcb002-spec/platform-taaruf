@@ -65,6 +65,7 @@ export function DashboardShell({
               <Link
                 key={href}
                 href={href}
+                prefetch={false}
                 className={active ? "active" : ""}
                 onClick={() => setOpen(false)}
               >
@@ -78,7 +79,9 @@ export function DashboardShell({
         <div className="sidebar-help">
           <span className="mono">BUTUH BANTUAN?</span>
           <p>Hubungi admin sesuai peran Anda melalui menu dukungan resmi.</p>
-          <Link href="/dashboard/panduan">Buka pusat panduan →</Link>
+          <Link href="/dashboard/panduan" prefetch={false}>
+            Buka pusat panduan →
+          </Link>
         </div>
         <button
           className="signout"
@@ -114,6 +117,7 @@ export function DashboardShell({
           <div className="top-actions">
             <Link
               href="/dashboard/notifikasi"
+              prefetch={false}
               aria-label="Notifikasi"
               className="notification-button"
             >

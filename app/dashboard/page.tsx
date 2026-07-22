@@ -13,7 +13,8 @@ import { roleLabels } from "@/lib/roles";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { retryTransientRead } from "@/lib/retry";
+import { readTransientOrFallback } from "@/lib/retry";
+import { DataSyncNotice } from "@/app/components/DataSyncNotice";
 
 const roleContent = {
   participant_male: {
@@ -71,20 +72,25 @@ export default async function DashboardPage() {
   const { user } = await requireSession();
   const content = roleContent[user.role];
   const isParticipant = user.role.startsWith("participant_");
-  const [profile] = isParticipant
-    ? await retryTransientRead(() =>
-        db
-          .select({ completionPercent: profiles.completionPercent })
-          .from(profiles)
-          .where(eq(profiles.userId, user.id))
-          .limit(1),
+  const profileResult = isParticipant
+    ? await readTransientOrFallback(
+        () =>
+          db
+            .select({ completionPercent: profiles.completionPercent })
+            .from(profiles)
+            .where(eq(profiles.userId, user.id))
+            .limit(1),
+        [],
+        "dashboard.profile-summary",
       )
-    : [];
+    : { data: [], degraded: false };
+  const [profile] = profileResult.data;
   const progress = isParticipant
     ? (profile?.completionPercent ?? 0)
     : content.progress;
   return (
     <>
+      {profileResult.degraded ? <DataSyncNotice /> : null}
       <section className="dashboard-welcome">
         <div>
           <p className="mono">
@@ -115,7 +121,7 @@ export default async function DashboardPage() {
           </span>
           <h2>{content.title}</h2>
           <p>{content.body}</p>
-          <Link href={content.href} className="app-primary">
+          <Link href={content.href} className="app-primary" prefetch={false}>
             {content.action} <ArrowUpRight />
           </Link>
         </div>
@@ -180,7 +186,9 @@ export default async function DashboardPage() {
               <p className="mono">AKTIVITAS TERBARU</p>
               <h2>Jejak proses</h2>
             </div>
-            <Link href="/dashboard/proses">Lihat semua</Link>
+            <Link href="/dashboard/proses" prefetch={false}>
+              Lihat semua
+            </Link>
           </header>
           <div className="timeline-list">
             {[
@@ -208,7 +216,7 @@ export default async function DashboardPage() {
             Platform tidak membuka komunikasi pribadi. Gunakan ruang terarah dan
             libatkan wali serta mediator sesuai tahap.
           </p>
-          <Link href="/dashboard/panduan">
+          <Link href="/dashboard/panduan" prefetch={false}>
             Baca adab proses <ArrowUpRight />
           </Link>
         </aside>

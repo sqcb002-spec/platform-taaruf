@@ -46,3 +46,17 @@ export async function retryTransientRead<T>(
   }
   throw lastError;
 }
+
+export async function readTransientOrFallback<T>(
+  operation: () => Promise<T>,
+  fallback: T,
+  context: string,
+) {
+  try {
+    return { data: await retryTransientRead(operation), degraded: false };
+  } catch (error) {
+    if (!isTransientDatabaseError(error)) throw error;
+    console.warn("database.read.degraded", { context });
+    return { data: fallback, degraded: true };
+  }
+}

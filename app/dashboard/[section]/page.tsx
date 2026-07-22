@@ -17,8 +17,9 @@ import { DocumentUpload } from "@/app/components/DocumentUpload";
 import { db } from "@/db";
 import { profileSections } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { retryTransientRead } from "@/lib/retry";
+import { readTransientOrFallback } from "@/lib/retry";
 import { PendingSubmitButton } from "@/app/components/PendingSubmitButton";
+import { DataSyncNotice } from "@/app/components/DataSyncNotice";
 
 function ProfileCoreForm({ role }: { role: string }) {
   return (
@@ -115,7 +116,7 @@ function FormPrivacy() {
 function FormFooter() {
   return (
     <footer>
-      <Link href="/dashboard" className="app-secondary">
+      <Link href="/dashboard" className="app-secondary" prefetch={false}>
         Simpan nanti
       </Link>
       <PendingSubmitButton />
@@ -150,6 +151,7 @@ function BiodataModule({
           <Link
             key={item.key}
             href={`/dashboard/biodata?bagian=${item.key}`}
+            prefetch={false}
             className={`${item.key === definition.key ? "current" : ""} ${completed.has(item.key) ? "complete" : ""}`}
           >
             <span>{completed.has(item.key) ? <Check /> : index + 1}</span>
@@ -276,33 +278,39 @@ export default async function DashboardSectionPage({
     title: section.replaceAll("-", " "),
     body: "Kelola informasi dan tindakan yang menjadi kewenangan Anda pada ruang ini.",
   };
+  const completedResult =
+    section === "biodata"
+      ? await readTransientOrFallback(
+          () =>
+            db
+              .select({ key: profileSections.key })
+              .from(profileSections)
+              .where(eq(profileSections.userId, user.id)),
+          [],
+          "dashboard.profile-sections",
+        )
+      : { data: [], degraded: false };
   return (
     <>
+      {completedResult.degraded ? <DataSyncNotice /> : null}
       <header className="module-heading">
         <div>
           <p className="mono">{copy.eyebrow}</p>
           <h1>{copy.title}</h1>
           <p>{copy.body}</p>
         </div>
-        <Link href="/dashboard/panduan" className="app-secondary">
+        <Link
+          href="/dashboard/panduan"
+          className="app-secondary"
+          prefetch={false}
+        >
           <FileText /> Lihat panduan
         </Link>
       </header>
       {section === "biodata" ? (
         <BiodataModule
           selectedKey={query.bagian ?? "profile"}
-          completed={
-            new Set(
-              (
-                await retryTransientRead(() =>
-                  db
-                    .select({ key: profileSections.key })
-                    .from(profileSections)
-                    .where(eq(profileSections.userId, user.id)),
-                )
-              ).map((item) => item.key),
-            )
-          }
+          completed={new Set(completedResult.data.map((item) => item.key))}
           role={user.role}
         />
       ) : (
