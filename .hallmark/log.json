@@ -1,6 +1,15 @@
 [
   {
     "date": "2026-07-22",
+    "macrostructure": "Index-First",
+    "theme": "Sakinah Forest",
+    "enrichment": "None — content-led member journey",
+    "brief": "Participant and guardian personal portal",
+    "nav": "N9",
+    "footer": "Ft1"
+  },
+  {
+    "date": "2026-07-22",
     "macrostructure": "Narrative Workflow",
     "theme": "Sakinah Forest",
     "enrichment": "CSS path map",

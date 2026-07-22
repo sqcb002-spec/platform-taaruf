@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, CalendarDays, CheckCircle2, Clock3, FileText, HeartHandshake, LoaderCircle, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCircle2, Clock3, FileText, HeartHandshake, LoaderCircle, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { authClient } from "@/lib/auth-client";
 import { roleLabels, type AppRole } from "@/lib/roles";
@@ -19,6 +19,68 @@ const roleContent = {
 
 type Summary = { user: { id: string; name: string; role: AppRole; displayCode: string }; completionPercent: number };
 
+function PortalLoading() {
+  return <section className="portal-overview portal-overview-loading" aria-label="Memuat ringkasan"><div className="skeleton portal-skeleton-kicker" /><div className="skeleton portal-skeleton-title" /><div className="portal-skeleton-layout"><div className="skeleton portal-skeleton-main" /><div className="skeleton portal-skeleton-aside" /></div><p aria-live="polite"><LoaderCircle className="spin" /> Menyiapkan perjalanan Anda…</p></section>;
+}
+
+function ParticipantOverview({ summary, name }: { summary: Summary; name: string }) {
+  const role = summary.user.role;
+  const isGuardian = role === "guardian";
+  const progress = summary.completionPercent;
+  const content = roleContent[role];
+  const participantSteps = [
+    { title: "Lengkapi biodata", detail: "Cerita diri, kesiapan, dan kriteria pasangan.", href: "/dashboard/biodata", done: progress >= 100, current: progress < 100 },
+    { title: "Verifikasi data", detail: "Identitas diperiksa oleh petugas sesuai kewenangan.", href: "/dashboard/biodata", done: false, current: progress >= 100 },
+    { title: "Terima rekomendasi", detail: "Profil terbatas dibuka setelah syarat awal terpenuhi.", href: "/dashboard/rekomendasi", done: false, current: false },
+    { title: "Jalani ta’aruf", detail: "Satu proses aktif dengan wali dan mediator.", href: "/dashboard/proses", done: false, current: false },
+  ];
+  const guardianSteps = [
+    { title: "Akhwat terhubung", detail: "Pastikan hubungan wali tercatat dan terverifikasi.", href: "/dashboard/amanah", done: false, current: true },
+    { title: "Tinjau persetujuan", detail: "Keputusan akhwat tetap terpisah dari keputusan wali.", href: "/dashboard/persetujuan", done: false, current: false },
+    { title: "Dampingi nazhor", detail: "Lihat jadwal, lokasi, dan konfirmasi kehadiran.", href: "/dashboard/nazhor", done: false, current: false },
+    { title: "Simpan riwayat", detail: "Setiap keputusan tercatat bersama waktu dan SOP.", href: "/dashboard/riwayat", done: false, current: false },
+  ];
+  const steps = isGuardian ? guardianSteps : participantSteps;
+
+  return <div className="portal-overview">
+    <header className="portal-welcome">
+      <p>{roleLabels[role]} · {summary.user.displayCode}</p>
+      <h1>Assalamu’alaikum, {name}.</h1>
+      <span>{isGuardian ? "Ruang ini membantu Anda menjaga amanah wali dengan keputusan yang jelas dan tercatat." : "Tidak perlu terburu-buru. Selesaikan satu tahap dengan jujur sebelum melangkah ke tahap berikutnya."}</span>
+    </header>
+
+    <div className="portal-overview-grid">
+      <section className="portal-next-step">
+        <div className="portal-next-copy">
+          <p><Clock3 /> Langkah yang disarankan</p>
+          <h2>{content.title}</h2>
+          <span>{content.body}</span>
+          <Link href={content.href} prefetch={false}>{content.action}<ArrowRight /></Link>
+        </div>
+        {!isGuardian ? <div className="portal-completion" aria-label={`Kelengkapan biodata ${progress} persen`}><strong>{progress}%</strong><span>Biodata terisi</span><div><i style={{ width: `${progress}%` }} /></div></div> : <div className="portal-trust-mark"><LockKeyhole /><strong>Persetujuan berlapis</strong><span>Akhwat dan wali memutuskan secara terpisah.</span></div>}
+      </section>
+
+      <aside className="portal-guidance">
+        <ShieldCheck />
+        <h2>Yang kami jaga</h2>
+        <p>Kontak pribadi dan foto tidak dibuka sebagai etalase. Setiap akses mengikuti tahap, tujuan, dan persetujuan.</p>
+        <Link href="/dashboard/panduan" prefetch={false}>Baca panduan proses <ArrowUpRight /></Link>
+      </aside>
+    </div>
+
+    <section className="portal-journey">
+      <header><div><h2>{isGuardian ? "Alur amanah wali" : "Perjalanan Anda"}</h2><p>{isGuardian ? "Empat titik pendampingan yang perlu Anda kenali." : "Tahap dibuat berurutan agar fokus tetap terjaga."}</p></div>{!isGuardian ? <span>{progress}% terisi</span> : null}</header>
+      <ol>
+        {steps.map((step, index) => <li key={step.title} className={step.done ? "done" : step.current ? "current" : ""}>
+          <span>{step.done ? <Check /> : String(index + 1).padStart(2, "0")}</span>
+          <div><strong>{step.title}</strong><p>{step.detail}</p></div>
+          <Link href={step.href} prefetch={false} aria-label={`Buka ${step.title}`}><ArrowRight /></Link>
+        </li>)}
+      </ol>
+    </section>
+  </div>;
+}
+
 export function DashboardOverview() {
   const { data: authSession } = authClient.useSession();
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -34,7 +96,7 @@ export function DashboardOverview() {
     return () => controller.abort();
   }, [attempt]);
 
-  if (!summary && !error) return <section className="dashboard-loading"><div className="skeleton skeleton-title" /><div className="skeleton skeleton-panel" /><div className="metric-grid">{[1,2,3].map((item) => <div className="skeleton skeleton-metric" key={item} />)}</div><p><LoaderCircle className="spin" /> Mengambil ringkasan terbaru…</p></section>;
+  if (!summary && !error) return authSession?.user && ((authSession.user as typeof authSession.user & { role?: AppRole }).role?.startsWith("participant_") || (authSession.user as typeof authSession.user & { role?: AppRole }).role === "guardian") ? <PortalLoading /> : <section className="dashboard-loading"><div className="skeleton skeleton-title" /><div className="skeleton skeleton-panel" /><div className="metric-grid">{[1,2,3].map((item) => <div className="skeleton skeleton-metric" key={item} />)}</div><p><LoaderCircle className="spin" /> Mengambil ringkasan terbaru…</p></section>;
   if (!summary) return <section className="dashboard-error"><ShieldCheck /><h1>Ringkasan belum dapat dimuat.</h1><p>{error}</p><button className="app-primary" onClick={() => setAttempt((value) => value + 1)}><RefreshCw /> Coba lagi</button></section>;
 
   const role = summary.user.role;
@@ -42,6 +104,7 @@ export function DashboardOverview() {
   const isParticipant = role.startsWith("participant_");
   const progress = isParticipant ? summary.completionPercent : 0;
   const name = summary.user.name || authSession?.user.name || "Sahabat";
+  if (isParticipant || role === "guardian") return <ParticipantOverview summary={summary} name={name} />;
   return <>
     <section className="dashboard-welcome"><div><p className="mono">{roleLabels[role].toUpperCase()} · {summary.user.displayCode}</p><h1>Assalamu’alaikum, {name}.</h1><p>Berikut keadaan proses dan amanah yang perlu Anda perhatikan hari ini.</p></div><div className="today"><CalendarDays /><span>Hari ini</span><strong>{new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date())}</strong></div></section>
     <section className="focus-panel"><div className="focus-copy"><span className="status-chip"><Clock3 /> Tindakan berikutnya</span><h2>{content.title}</h2><p>{content.body}</p><Link href={content.href} className="app-primary" prefetch={false}>{content.action} <ArrowUpRight /></Link></div><div className="progress-orbit" style={{ "--progress": `${progress * 3.6}deg` } as React.CSSProperties}><div><strong>{progress}%</strong><span>{isParticipant ? "Kelengkapan" : "Terselesaikan"}</span></div></div></section>
