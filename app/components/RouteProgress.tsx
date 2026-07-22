@@ -7,11 +7,12 @@ import { LoaderCircle } from "lucide-react";
 export function RouteProgress() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const search = searchParams.toString();
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
     setPending(false);
-  }, [pathname, searchParams]);
+  }, [pathname, search]);
 
   useEffect(() => {
     function startNavigation(event: MouseEvent) {
