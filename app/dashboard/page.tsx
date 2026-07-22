@@ -10,6 +10,9 @@ import {
 } from "lucide-react";
 import { requireSession } from "@/lib/session";
 import { roleLabels } from "@/lib/roles";
+import { db } from "@/db";
+import { profiles } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 const roleContent = {
   participant_male: {
@@ -17,49 +20,49 @@ const roleContent = {
     body: "Biodata Anda belum siap ditinjau. Selesaikan bagian wajib dan verifikasi identitas untuk membuka rekomendasi.",
     action: "Lanjutkan biodata",
     href: "/dashboard/biodata",
-    progress: 32,
+    progress: 0,
   },
   participant_female: {
     title: "Lengkapi bekal dan hubungan wali.",
     body: "Biodata, identitas, tiga referensi, dan wali terverifikasi diperlukan sebelum menerima rekomendasi.",
     action: "Lanjutkan biodata",
     href: "/dashboard/biodata",
-    progress: 32,
+    progress: 0,
   },
   guardian: {
     title: "Belum ada keputusan yang mendesak.",
     body: "Saat permintaan persetujuan masuk, Anda akan melihat biodata calon dan versi SOP yang berlaku.",
     action: "Lihat amanah wali",
     href: "/dashboard/amanah",
-    progress: 100,
+    progress: 0,
   },
   mediator: {
-    title: "Tiga proses membutuhkan perhatian.",
-    body: "Urutan kerja disusun berdasarkan tenggat dan tindakan yang belum diselesaikan.",
+    title: "Belum ada proses yang ditugaskan.",
+    body: "Proses baru akan muncul berdasarkan penugasan dan tenggat operasional.",
     action: "Buka penugasan",
     href: "/dashboard/penugasan",
-    progress: 74,
+    progress: 0,
   },
   admin_male: {
-    title: "Antrean verifikasi ikhwan tersedia.",
+    title: "Belum ada antrean verifikasi ikhwan.",
     body: "Tinjau identitas, kesesuaian biodata, dan catatan OCR berdasarkan waktu masuk.",
     action: "Buka antrean",
     href: "/dashboard/verifikasi",
-    progress: 68,
+    progress: 0,
   },
   admin_female: {
-    title: "Antrean verifikasi akhwat tersedia.",
+    title: "Belum ada antrean verifikasi akhwat.",
     body: "Tinjau identitas, hubungan wali, dan kelengkapan biodata berdasarkan waktu masuk.",
     action: "Buka antrean",
     href: "/dashboard/verifikasi",
-    progress: 68,
+    progress: 0,
   },
   super_admin: {
     title: "Operasional platform dalam kendali.",
     body: "Pantau antrean, kebijakan aktif, worker dokumen, dan kejadian yang membutuhkan review kedua.",
     action: "Lihat audit sistem",
     href: "/dashboard/audit",
-    progress: 91,
+    progress: 0,
   },
 } as const;
 
@@ -67,6 +70,16 @@ export default async function DashboardPage() {
   const { user } = await requireSession();
   const content = roleContent[user.role];
   const isParticipant = user.role.startsWith("participant_");
+  const [profile] = isParticipant
+    ? await db
+        .select({ completionPercent: profiles.completionPercent })
+        .from(profiles)
+        .where(eq(profiles.userId, user.id))
+        .limit(1)
+    : [];
+  const progress = isParticipant
+    ? (profile?.completionPercent ?? 0)
+    : content.progress;
   return (
     <>
       <section className="dashboard-welcome">
@@ -107,12 +120,12 @@ export default async function DashboardPage() {
           className="progress-orbit"
           style={
             {
-              "--progress": `${content.progress * 3.6}deg`,
+              "--progress": `${progress * 3.6}deg`,
             } as React.CSSProperties
           }
         >
           <div>
-            <strong>{content.progress}%</strong>
+            <strong>{progress}%</strong>
             <span>{isParticipant ? "Kelengkapan" : "Terselesaikan"}</span>
           </div>
         </div>
@@ -124,11 +137,15 @@ export default async function DashboardPage() {
           </span>
           <div>
             <small>{isParticipant ? "Bagian biodata" : "Antrean utama"}</small>
-            <strong>{isParticipant ? "6 dari 17" : "12"}</strong>
+            <strong>
+              {isParticipant
+                ? `${Math.round((progress / 100) * 17)} dari 17`
+                : "0"}
+            </strong>
             <p>
               {isParticipant
-                ? "11 bagian belum lengkap"
-                : "4 melewati SLA hari ini"}
+                ? `${17 - Math.round((progress / 100) * 17)} bagian belum lengkap`
+                : "Tidak ada item melewati SLA"}
             </p>
           </div>
         </article>
@@ -138,7 +155,7 @@ export default async function DashboardPage() {
           </span>
           <div>
             <small>Proses aktif</small>
-            <strong>{isParticipant ? "Belum ada" : "8 proses"}</strong>
+            <strong>{isParticipant ? "Belum ada" : "0 proses"}</strong>
             <p>Satu proses aktif per peserta</p>
           </div>
         </article>

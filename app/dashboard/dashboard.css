@@ -517,7 +517,8 @@
   color: color-mix(in oklch, var(--color-paper) 60%, transparent);
   font-size: 0.68rem;
 }
-.section-progress button {
+.section-progress button,
+.section-progress > a {
   width: 100%;
   min-height: 2.6rem;
   display: grid;
@@ -532,7 +533,8 @@
   text-align: left;
   font-size: 0.75rem;
 }
-.section-progress button > span {
+.section-progress button > span,
+.section-progress > a > span {
   width: 1.45rem;
   aspect-ratio: 1;
   display: grid;
@@ -541,15 +543,18 @@
   border-radius: 50%;
   font-size: 0.62rem;
 }
-.section-progress button svg {
+.section-progress button svg,
+.section-progress > a svg {
   width: 0.8rem;
 }
-.section-progress button.current {
+.section-progress button.current,
+.section-progress > a.current {
   background: var(--color-cyan-soft);
   color: var(--color-ink);
   font-weight: 800;
 }
-.section-progress button.complete > span {
+.section-progress button.complete > span,
+.section-progress > a.complete > span {
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: white;
@@ -658,6 +663,52 @@
 .profile-form .app-primary {
   margin-top: 0;
 }
+.upload-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+.document-upload {
+  min-height: 6rem;
+  padding: 1rem;
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.9rem !important;
+  border: 1px dashed var(--color-rule);
+  border-radius: 0.9rem;
+  background: var(--color-paper-2);
+  cursor: pointer;
+}
+.document-upload input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+}
+.document-upload > span {
+  width: 2.75rem;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  background: var(--color-cyan-soft);
+  color: var(--color-accent);
+}
+.document-upload svg {
+  width: 1.15rem;
+}
+.document-upload p {
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+.document-upload.done {
+  border-style: solid;
+  border-color: var(--color-accent);
+}
+.document-upload.error {
+  border-color: #9b2f28;
+}
 .queue-card {
   overflow: hidden;
 }
@@ -756,6 +807,29 @@
   font-family: var(--font-label);
   font-size: 0.62rem;
 }
+.empty-queue {
+  min-width: 36rem;
+  padding: 4rem 1.5rem;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  color: var(--color-muted);
+}
+.empty-queue > svg {
+  width: 2rem;
+  margin-bottom: 0.8rem;
+  color: var(--color-accent);
+}
+.empty-queue h3 {
+  color: var(--color-ink);
+  font-size: 1.1rem;
+}
+.empty-queue p {
+  max-width: 28rem;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
 @media (hover: hover) and (pointer: fine) {
   .app-nav a:hover {
     background: color-mix(in oklch, var(--color-paper) 7%, transparent);
@@ -777,6 +851,9 @@
     grid-template-columns: repeat(3, 1fr);
   }
   .field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .upload-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .autosave {

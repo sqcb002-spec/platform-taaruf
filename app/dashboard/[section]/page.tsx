@@ -12,176 +12,219 @@ import {
 import { notFound } from "next/navigation";
 import { navForRole, sectionCopy } from "@/lib/dashboard-config";
 import { requireSession } from "@/lib/session";
-import { saveProfileCore } from "@/app/dashboard/actions";
+import { saveProfileCore, saveProfileSection } from "@/app/dashboard/actions";
+import { profileFormSections } from "@/lib/profile-form";
+import { DocumentUpload } from "@/app/components/DocumentUpload";
+import { db } from "@/db";
+import { profileSections } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
-const biodataSections = [
-  "Profil utama",
-  "Foto & identitas",
-  "Gambaran fisik",
-  "Gambaran diri",
-  "Keluarga",
-  "Pendidikan",
-  "Pengalaman",
-  "Ibadah & pemahaman",
-  "Persiapan pernikahan",
-  "Harapan ke depan",
-  "Kriteria fisik",
-  "Kriteria non-fisik",
-  "Pertanyaan pasangan",
-  "Karakter & emosi",
-  "Pola hidup",
-  "Pengalaman hidup",
-  "Tiga referensi",
-];
+function ProfileCoreForm({ role }: { role: string }) {
+  return (
+    <form className="profile-form" action={saveProfileCore}>
+      <div className="field-grid">
+        <label>
+          Username
+          <input name="username" required />
+        </label>
+        <label>
+          Jenis kelamin
+          <select
+            name="gender"
+            defaultValue={role === "participant_female" ? "Akhwat" : "Ikhwan"}
+            disabled
+          >
+            <option>Ikhwan</option>
+            <option>Akhwat</option>
+          </select>
+          <input
+            type="hidden"
+            name="gender"
+            value={role === "participant_female" ? "Akhwat" : "Ikhwan"}
+          />
+        </label>
+        <label>
+          Tanggal lahir
+          <input name="birthDate" type="date" required />
+        </label>
+        <label>
+          Status pernikahan
+          <select name="maritalStatus" required>
+            <option value="">Pilih status</option>
+            <option>Belum pernah menikah</option>
+            <option>Duda</option>
+            <option>Janda</option>
+          </select>
+        </label>
+        <label>
+          Provinsi
+          <input name="province" required />
+        </label>
+        <label>
+          Kota/kabupaten
+          <input name="city" required />
+        </label>
+        <label>
+          Manhaj
+          <input name="manhaj" required />
+        </label>
+        <label>
+          Suku
+          <input name="ethnicity" required />
+        </label>
+        <label>
+          Tinggi badan
+          <div className="unit-input">
+            <input name="heightCm" type="number" min="120" max="230" required />
+            <span>cm</span>
+          </div>
+        </label>
+        <label>
+          Berat badan
+          <div className="unit-input">
+            <input name="weightKg" type="number" min="30" max="250" required />
+            <span>kg</span>
+          </div>
+        </label>
+      </div>
+      <label>
+        Tempat dan bidang pekerjaan
+        <textarea name="occupation" rows={3} required />
+      </label>
+      <FormPrivacy />
+      <FormFooter />
+    </form>
+  );
+}
 
-function BiodataModule() {
+function FormPrivacy() {
+  return (
+    <div className="sensitive-note">
+      <ShieldCheck />
+      <div>
+        <strong>Visibilitas data dijaga bertahap</strong>
+        <p>
+          Kontak, dokumen identitas, dan jawaban sensitif tidak ditampilkan
+          otomatis kepada kandidat.
+        </p>
+      </div>
+    </div>
+  );
+}
+function FormFooter() {
+  return (
+    <footer>
+      <Link href="/dashboard" className="app-secondary">
+        Simpan nanti
+      </Link>
+      <button className="app-primary">
+        Simpan bagian <ArrowRight />
+      </button>
+    </footer>
+  );
+}
+
+function BiodataModule({
+  selectedKey,
+  completed,
+  role,
+}: {
+  selectedKey: string;
+  completed: Set<string>;
+  role: string;
+}) {
+  const definition =
+    profileFormSections.find((item) => item.key === selectedKey) ??
+    profileFormSections[0];
+  const done = completed.size;
+  const percent = Math.round((done / profileFormSections.length) * 100);
   return (
     <div className="biodata-layout">
       <aside className="section-progress">
         <div>
-          <strong>32%</strong>
-          <span>6 dari 17 bagian</span>
+          <strong>{percent}%</strong>
+          <span>
+            {done} dari {profileFormSections.length} bagian
+          </span>
         </div>
-        {biodataSections.map((label, index) => (
-          <button
-            key={label}
-            className={index === 0 ? "current" : index < 5 ? "complete" : ""}
+        {profileFormSections.map((item, index) => (
+          <Link
+            key={item.key}
+            href={`/dashboard/biodata?bagian=${item.key}`}
+            className={`${item.key === definition.key ? "current" : ""} ${completed.has(item.key) ? "complete" : ""}`}
           >
-            <span>{index < 5 ? <Check /> : index + 1}</span>
-            {label}
+            <span>{completed.has(item.key) ? <Check /> : index + 1}</span>
+            {item.label}
             <ChevronRight />
-          </button>
+          </Link>
         ))}
       </aside>
       <section className="form-card">
         <header>
           <div>
-            <p className="mono">BAGIAN 01</p>
-            <h2>Profil utama</h2>
-            <p>
-              Data identitas dasar. Kandidat hanya melihat bentuk ringkas sesuai
-              tahap.
+            <p className="mono">
+              BAGIAN{" "}
+              {String(profileFormSections.indexOf(definition) + 1).padStart(
+                2,
+                "0",
+              )}
             </p>
+            <h2>{definition.label}</h2>
+            <p>{definition.description}</p>
           </div>
           <span className="autosave">
             <span /> Tersimpan otomatis
           </span>
         </header>
-        <form className="profile-form" action={saveProfileCore}>
-          <div className="field-grid">
-            <label>
-              Username
-              <input name="username" defaultValue="ahmad_fulan" required />
-            </label>
-            <label>
-              Jenis kelamin
-              <select name="gender" defaultValue="Ikhwan">
-                <option>Ikhwan</option>
-                <option>Akhwat</option>
-              </select>
-            </label>
-            <label>
-              Tanggal lahir
-              <input name="birthDate" type="date" required />
-            </label>
-            <label>
-              Status pernikahan
-              <select name="maritalStatus" required>
-                <option value="">Pilih status</option>
-                <option>Belum pernah menikah</option>
-                <option>Duda</option>
-                <option>Janda</option>
-              </select>
-            </label>
-            <label>
-              Provinsi
-              <input
-                name="province"
-                placeholder="Contoh: Jawa Barat"
-                required
+        {definition.key === "profile" ? (
+          <ProfileCoreForm role={role} />
+        ) : definition.key === "identity" ? (
+          <div className="profile-form">
+            <div className="upload-grid">
+              <DocumentUpload
+                kind="identity_card"
+                label="Foto KTP bagian depan"
               />
-            </label>
-            <label>
-              Kota/kabupaten
-              <input name="city" placeholder="Domisili saat ini" required />
-            </label>
-            <label>
-              Manhaj
-              <input
-                name="manhaj"
-                placeholder="Jelaskan secara ringkas"
-                required
+              <DocumentUpload
+                kind="identity_selfie"
+                label="Foto verifikasi diri bersama KTP"
               />
-            </label>
-            <label>
-              Suku
-              <input name="ethnicity" required />
-            </label>
-            <label>
-              Tinggi badan
-              <div className="unit-input">
-                <input
-                  name="heightCm"
-                  type="number"
-                  min="120"
-                  max="230"
-                  required
-                />
-                <span>cm</span>
-              </div>
-            </label>
-            <label>
-              Berat badan
-              <div className="unit-input">
-                <input
-                  name="weightKg"
-                  type="number"
-                  min="30"
-                  max="250"
-                  required
-                />
-                <span>kg</span>
-              </div>
-            </label>
-          </div>
-          <label>
-            Tempat dan bidang pekerjaan
-            <textarea
-              name="occupation"
-              rows={3}
-              required
-              placeholder="Jelaskan bidang pekerjaan tanpa membuka alamat kantor kepada kandidat."
-            />
-          </label>
-          <div className="sensitive-note">
-            <ShieldCheck />
-            <div>
-              <strong>Visibilitas data dijaga bertahap</strong>
-              <p>
-                Alamat lengkap, kontak, dan dokumen identitas tidak ditampilkan
-                pada profil kandidat.
-              </p>
+              <DocumentUpload
+                kind="profile_photo"
+                label="Foto peserta untuk verifikasi"
+              />
             </div>
+            <FormPrivacy />
           </div>
-          <footer>
-            <button type="button" className="app-secondary">
-              Simpan sebagai draf
-            </button>
-            <button className="app-primary">
-              Simpan & lanjutkan <ArrowRight />
-            </button>
-          </footer>
-        </form>
+        ) : (
+          <form className="profile-form" action={saveProfileSection}>
+            <input type="hidden" name="sectionKey" value={definition.key} />
+            <div className="field-grid">
+              {definition.fields.map((field) => (
+                <label key={field.name}>
+                  {field.label}
+                  {field.type === "textarea" ? (
+                    <textarea name={field.name} rows={4} required />
+                  ) : (
+                    <input
+                      name={field.name}
+                      type={field.type ?? "text"}
+                      required
+                    />
+                  )}
+                </label>
+              ))}
+            </div>
+            <FormPrivacy />
+            <FormFooter />
+          </form>
+        )}
       </section>
     </div>
   );
 }
 
 function QueueModule({ section }: { section: string }) {
-  const labels =
-    section === "rekomendasi"
-      ? ["TS-4A19C2", "TS-82D7B1", "TS-118FE0"]
-      : ["TS-029AC1", "TS-44FA20", "TS-791EC8"];
   return (
     <section className="queue-card">
       <div className="queue-tools">
@@ -201,36 +244,15 @@ function QueueModule({ section }: { section: string }) {
           <span>Tenggat</span>
           <span />
         </div>
-        {labels.map((code, index) => (
-          <div className="data-row" key={code}>
-            <span>
-              <strong>{code}</strong>
-              <small>
-                {section === "rekomendasi"
-                  ? `${84 - index * 5}% cocok`
-                  : "Masuk hari ini"}
-              </small>
-            </span>
-            <span>
-              <em className={index === 0 ? "status-warn" : "status-neutral"}>
-                {index === 0 ? "Perlu tindakan" : "Menunggu"}
-              </em>
-            </span>
-            <span>
-              {section === "rekomendasi"
-                ? "Jawa Barat · 26–30 tahun"
-                : "Biodata dan identitas"}
-            </span>
-            <span>
-              <Clock3 /> {index + 1} hari
-            </span>
-            <span>
-              <button aria-label={`Buka ${code}`}>
-                <ChevronRight />
-              </button>
-            </span>
-          </div>
-        ))}
+        <div className="empty-queue">
+          <Search />
+          <h3>Belum ada data pada ruang ini.</h3>
+          <p>
+            {section === "rekomendasi"
+              ? "Rekomendasi muncul setelah seluruh biodata dan verifikasi disetujui."
+              : "Item baru akan muncul otomatis ketika membutuhkan tindakan Anda."}
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -238,10 +260,13 @@ function QueueModule({ section }: { section: string }) {
 
 export default async function DashboardSectionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ section: string }>;
+  searchParams: Promise<{ bagian?: string }>;
 }) {
   const { section } = await params;
+  const query = await searchParams;
   const { user } = await requireSession();
   const allowed = navForRole(user.role).some(
     (item) => item.href === `/dashboard/${section}`,
@@ -265,7 +290,20 @@ export default async function DashboardSectionPage({
         </Link>
       </header>
       {section === "biodata" ? (
-        <BiodataModule />
+        <BiodataModule
+          selectedKey={query.bagian ?? "profile"}
+          completed={
+            new Set(
+              (
+                await db
+                  .select({ key: profileSections.key })
+                  .from(profileSections)
+                  .where(eq(profileSections.userId, user.id))
+              ).map((item) => item.key),
+            )
+          }
+          role={user.role}
+        />
       ) : (
         <QueueModule section={section} />
       )}
