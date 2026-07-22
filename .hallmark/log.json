@@ -1,1 +1,20 @@
-[{"date":"2026-07-22","macrostructure":"Narrative Workflow","theme":"Hum","enrichment":"CSS path map","brief":"Ta'aruf platform total redesign","nav":"N12","footer":"Ft5"}]
+[
+  {
+    "date": "2026-07-22",
+    "macrostructure": "Narrative Workflow",
+    "theme": "Sakinah Forest",
+    "enrichment": "CSS path map",
+    "brief": "Mature syariah-aligned colour system",
+    "nav": "N12",
+    "footer": "Ft5"
+  },
+  {
+    "date": "2026-07-22",
+    "macrostructure": "Narrative Workflow",
+    "theme": "Hum",
+    "enrichment": "CSS path map",
+    "brief": "Ta'aruf platform total redesign",
+    "nav": "N12",
+    "footer": "Ft5"
+  }
+]

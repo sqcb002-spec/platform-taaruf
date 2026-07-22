@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E4 S5 R4 V5 */
-/* Hallmark · genre: playful · macrostructure: Narrative Workflow · theme: Hum · enrichment: CSS path map · nav: N12 · footer: Ft5 · contrast: pass · slop: pass · honest: pass · tokens: pass · mobile: pass */
+/* Hallmark · genre: editorial · macrostructure: Narrative Workflow · theme: Sakinah Forest · enrichment: CSS path map · nav: N12 · footer: Ft5 · contrast: pass · slop: pass · honest: pass · tokens: pass · mobile: pass */
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
 @import "../tokens.css";
 * {
@@ -69,7 +69,7 @@ h3 {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--color-accent);
+  background: var(--color-coral);
   font-size: 1.1rem;
 }
 .btn {
@@ -167,7 +167,7 @@ button:focus-visible {
 }
 .notice-bar span {
   font-family: var(--font-label);
-  color: var(--color-accent);
+  color: var(--color-coral);
   text-transform: uppercase;
 }
 .notice-bar p {

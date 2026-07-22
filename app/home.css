@@ -109,7 +109,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--color-accent);
+  background: var(--color-coral);
   font-style: normal;
 }
 .path-card svg {
@@ -150,7 +150,7 @@
   width: 4.2rem;
   height: 4.2rem;
   border-radius: 48% 52% 45% 55%;
-  background: var(--color-accent);
+  background: var(--color-coral);
   transform: translate(-50%, -50%) rotate(8deg);
   animation: breathe 3.8s var(--ease-in-out) infinite;
 }
@@ -176,7 +176,7 @@
   color: var(--color-paper);
 }
 .himbauan .mono {
-  color: var(--color-accent);
+  color: var(--color-coral);
 }
 .himbauan h2,
 .purpose h2,
@@ -214,7 +214,7 @@
   border-radius: var(--radius-card);
 }
 .mission-stack article:first-child {
-  background: var(--color-accent);
+  background: var(--color-paper-3);
 }
 .mission-stack article:last-child {
   background: var(--color-cyan-soft);
