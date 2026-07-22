@@ -311,6 +311,11 @@
   color: var(--color-paper);
   box-shadow: 0 4px 0 var(--color-accent-deep);
 }
+.app-primary:disabled {
+  cursor: wait;
+  opacity: 0.78;
+  box-shadow: 0 2px 0 var(--color-accent-deep);
+}
 .app-secondary {
   border: 1px solid var(--color-rule);
   background: var(--color-paper);
@@ -706,6 +711,12 @@
   border-style: solid;
   border-color: var(--color-accent);
 }
+.document-upload.uploading {
+  cursor: wait;
+  border-style: solid;
+  border-color: var(--color-cyan);
+  background: color-mix(in oklch, var(--color-cyan-soft) 72%, var(--color-paper));
+}
 .document-upload.error {
   border-color: #9b2f28;
 }
@@ -842,6 +853,79 @@
   border-radius: 24px;
   background: var(--color-paper);
   text-align: center;
+}
+
+.dashboard-loading {
+  display: grid;
+  gap: 1rem;
+}
+
+.dashboard-loading-heading {
+  min-height: 9rem;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.dashboard-loading-heading > div,
+.skeleton-focus-card > div {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.skeleton-dashboard-title { width: min(34rem, 70vw); }
+.skeleton-heading-action { display: none; }
+
+.skeleton-focus-card {
+  min-height: 18rem;
+  padding: clamp(1.35rem, 3vw, 2.5rem);
+  display: grid;
+  align-items: center;
+  gap: 2rem;
+  border-radius: var(--radius-card);
+  background: var(--color-ink);
+  overflow: hidden;
+}
+
+.skeleton-focus-title { width: min(30rem, 68vw); }
+.skeleton-on-dark { background: color-mix(in oklch, var(--color-paper) 13%, transparent); }
+.skeleton-orbit {
+  width: 9rem;
+  aspect-ratio: 1;
+  justify-self: center;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--color-paper) 10%, transparent);
+}
+
+.skeleton-metrics,
+.skeleton-dashboard-columns {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.skeleton-metric {
+  min-height: 7rem;
+  padding: 1.1rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  background: var(--color-paper);
+}
+
+.skeleton-metric > div { display: grid; gap: 0.65rem; }
+.skeleton-metric-icon { width: 2.6rem; height: 2.6rem; border-radius: 0.8rem; }
+.skeleton-panel { min-height: 16rem; border: 1px solid var(--color-rule); }
+.skeleton-panel-short { min-height: 12rem; }
+
+@media (min-width: 48rem) {
+  .skeleton-focus-card { grid-template-columns: 1fr auto; }
+  .skeleton-metrics { grid-template-columns: repeat(3, 1fr); }
+  .skeleton-dashboard-columns { grid-template-columns: 1.45fr 0.55fr; }
+  .skeleton-heading-action { display: block; }
 }
 
 .app-error-page {

@@ -20,11 +20,18 @@ export function DocumentUpload({
     const body = new FormData();
     body.set("kind", kind);
     body.set("file", file);
-    const response = await fetch("/api/documents", { method: "POST", body });
-    setState(response.ok ? "done" : "error");
+    try {
+      const response = await fetch("/api/documents", { method: "POST", body });
+      setState(response.ok ? "done" : "error");
+    } catch {
+      setState("error");
+    }
   }
   return (
-    <label className={`document-upload ${state}`}>
+    <label
+      className={`document-upload ${state}`}
+      aria-busy={state === "uploading"}
+    >
       <input
         type="file"
         accept="image/jpeg,image/png"
@@ -45,6 +52,8 @@ export function DocumentUpload({
         <p>
           {state === "done"
             ? "Terenkripsi dan masuk antrean pemeriksaan."
+            : state === "uploading"
+              ? "Mengunggah, mengenkripsi, dan menyimpan dengan aman…"
             : state === "error"
               ? "Upload gagal. Pastikan JPEG/PNG maksimal 5 MB."
               : "JPEG atau PNG, maksimal 5 MB."}

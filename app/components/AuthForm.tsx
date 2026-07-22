@@ -16,18 +16,26 @@ export function LoginForm() {
     setPending(true);
     setError("");
     const data = new FormData(event.currentTarget);
-    const result = await authClient.signIn.email({
-      email: String(data.get("email")),
-      password: String(data.get("password")),
-      rememberMe: true,
-    });
-    setPending(false);
-    if (result.error)
+    try {
+      const result = await authClient.signIn.email({
+        email: String(data.get("email")),
+        password: String(data.get("password")),
+        rememberMe: true,
+      });
+      if (result.error) {
+        setPending(false);
+        return setError(
+          result.error.message ?? "Email atau kata sandi tidak sesuai.",
+        );
+      }
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setPending(false);
       return setError(
-        result.error.message ?? "Email atau kata sandi tidak sesuai.",
+        "Koneksi terputus sesaat. Silakan coba masuk kembali.",
       );
-    router.push("/dashboard");
-    router.refresh();
+    }
   }
 
   return (
@@ -60,7 +68,9 @@ export function LoginForm() {
       ) : null}
       <button className="auth-submit" disabled={pending}>
         {pending ? (
-          <LoaderCircle className="spin" />
+          <>
+            <LoaderCircle className="spin" /> Menyiapkan dashboard…
+          </>
         ) : (
           <>
             Masuk ke dashboard <ArrowRight />
@@ -84,16 +94,21 @@ export function RegisterForm() {
     setPending(true);
     setError("");
     const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/register", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(form)),
-    });
-    const body = await response.json();
-    setPending(false);
-    if (!response.ok)
-      return setError(body.error ?? "Pendaftaran belum dapat diproses.");
-    setSent(true);
+    try {
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(Object.fromEntries(form)),
+      });
+      const body = await response.json();
+      setPending(false);
+      if (!response.ok)
+        return setError(body.error ?? "Pendaftaran belum dapat diproses.");
+      setSent(true);
+    } catch {
+      setPending(false);
+      setError("Koneksi terputus sesaat. Silakan coba kembali.");
+    }
   }
   if (sent)
     return (
@@ -160,7 +175,9 @@ export function RegisterForm() {
       ) : null}
       <button className="auth-submit" disabled={pending}>
         {pending ? (
-          <LoaderCircle className="spin" />
+          <>
+            <LoaderCircle className="spin" /> Membuat akun…
+          </>
         ) : (
           <>
             Buat akun <ArrowRight />

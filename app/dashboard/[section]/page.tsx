@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   Check,
   ChevronRight,
   Clock3,
@@ -19,6 +18,7 @@ import { db } from "@/db";
 import { profileSections } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { retryTransientRead } from "@/lib/retry";
+import { PendingSubmitButton } from "@/app/components/PendingSubmitButton";
 
 function ProfileCoreForm({ role }: { role: string }) {
   return (
@@ -118,9 +118,7 @@ function FormFooter() {
       <Link href="/dashboard" className="app-secondary">
         Simpan nanti
       </Link>
-      <button className="app-primary">
-        Simpan bagian <ArrowRight />
-      </button>
+      <PendingSubmitButton />
     </footer>
   );
 }

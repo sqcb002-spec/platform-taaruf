@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronDown, LogOut, Menu, Search, X } from "lucide-react";
+import { Bell, ChevronDown, LoaderCircle, LogOut, Menu, Search, X } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { navForRole } from "@/lib/dashboard-config";
 import { roleLabels, type AppRole } from "@/lib/roles";
@@ -18,12 +18,18 @@ export function DashboardShell({
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const nav = navForRole(user.role);
 
   async function signOut() {
-    await authClient.signOut();
-    router.push("/");
-    router.refresh();
+    setSigningOut(true);
+    try {
+      await authClient.signOut();
+      router.push("/");
+      router.refresh();
+    } catch {
+      setSigningOut(false);
+    }
   }
 
   return (
@@ -74,8 +80,14 @@ export function DashboardShell({
           <p>Hubungi admin sesuai peran Anda melalui menu dukungan resmi.</p>
           <Link href="/dashboard/panduan">Buka pusat panduan →</Link>
         </div>
-        <button className="signout" onClick={signOut}>
-          <LogOut /> Keluar
+        <button
+          className="signout"
+          onClick={signOut}
+          disabled={signingOut}
+          aria-busy={signingOut}
+        >
+          {signingOut ? <LoaderCircle className="spin" /> : <LogOut />}
+          {signingOut ? "Mengakhiri sesi…" : "Keluar"}
         </button>
       </aside>
       {open ? (

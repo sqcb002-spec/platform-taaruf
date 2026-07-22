@@ -5,16 +5,22 @@ import { ArrowRight, LoaderCircle } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 
 export function ForgotPasswordForm() {
-  const [state, setState] = useState<"idle" | "loading" | "sent">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "sent" | "error">(
+    "idle",
+  );
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setState("loading");
     const form = new FormData(event.currentTarget);
-    await authClient.requestPasswordReset({
-      email: String(form.get("email")),
-      redirectTo: "/atur-ulang-sandi",
-    });
-    setState("sent");
+    try {
+      await authClient.requestPasswordReset({
+        email: String(form.get("email")),
+        redirectTo: "/atur-ulang-sandi",
+      });
+      setState("sent");
+    } catch {
+      setState("error");
+    }
   }
   if (state === "sent")
     return (
@@ -32,9 +38,14 @@ export function ForgotPasswordForm() {
         Email akun
         <input name="email" type="email" required autoComplete="email" />
       </label>
+      {state === "error" ? (
+        <p className="form-error">Koneksi terputus sesaat. Silakan coba lagi.</p>
+      ) : null}
       <button className="auth-submit" disabled={state === "loading"}>
         {state === "loading" ? (
-          <LoaderCircle className="spin" />
+          <>
+            <LoaderCircle className="spin" /> Mengirim instruksi…
+          </>
         ) : (
           <>
             Kirim instruksi <ArrowRight />
@@ -48,21 +59,41 @@ export function ForgotPasswordForm() {
 export function StaffOtpForm() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [pending, setPending] = useState<"idle" | "sending" | "verifying">(
+    "idle",
+  );
   async function send() {
-    const result = await authClient.twoFactor.sendOtp({});
-    if (result.error) return setError("Kode belum dapat dikirim.");
-    setSent(true);
+    setPending("sending");
+    setError("");
+    try {
+      const result = await authClient.twoFactor.sendOtp({});
+      setPending("idle");
+      if (result.error) return setError("Kode belum dapat dikirim.");
+      setSent(true);
+    } catch {
+      setPending("idle");
+      setError("Koneksi terputus sesaat. Silakan coba lagi.");
+    }
   }
   async function verify(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setPending("verifying");
+    setError("");
     const code = String(new FormData(event.currentTarget).get("code"));
-    const result = await authClient.twoFactor.verifyOtp({
-      code,
-      trustDevice: false,
-    });
-    if (result.error)
-      return setError("Kode tidak sesuai atau telah kedaluwarsa.");
-    window.location.href = "/dashboard";
+    try {
+      const result = await authClient.twoFactor.verifyOtp({
+        code,
+        trustDevice: false,
+      });
+      if (result.error) {
+        setPending("idle");
+        return setError("Kode tidak sesuai atau telah kedaluwarsa.");
+      }
+      window.location.href = "/dashboard";
+    } catch {
+      setPending("idle");
+      setError("Koneksi terputus sesaat. Silakan coba lagi.");
+    }
   }
   return (
     <div className="auth-form">
@@ -78,13 +109,25 @@ export function StaffOtpForm() {
               autoComplete="one-time-code"
             />
           </label>
-          <button className="auth-submit">
-            Verifikasi kode <ArrowRight />
+          <button className="auth-submit" disabled={pending === "verifying"}>
+            {pending === "verifying" ? (
+              <><LoaderCircle className="spin" /> Memeriksa kode…</>
+            ) : (
+              <>Verifikasi kode <ArrowRight /></>
+            )}
           </button>
         </form>
       ) : (
-        <button className="auth-submit" onClick={send}>
-          Kirim kode ke email <ArrowRight />
+        <button
+          className="auth-submit"
+          onClick={send}
+          disabled={pending === "sending"}
+        >
+          {pending === "sending" ? (
+            <><LoaderCircle className="spin" /> Mengirim kode…</>
+          ) : (
+            <>Kirim kode ke email <ArrowRight /></>
+          )}
         </button>
       )}
       {error ? <p className="form-error">{error}</p> : null}
@@ -102,11 +145,15 @@ export function ResetPasswordForm({ token }: { token: string }) {
     const data = new FormData(event.currentTarget);
     const password = String(data.get("password"));
     if (password !== String(data.get("confirmation"))) return setState("error");
-    const result = await authClient.resetPassword({
-      newPassword: password,
-      token,
-    });
-    setState(result.error ? "error" : "done");
+    try {
+      const result = await authClient.resetPassword({
+        newPassword: password,
+        token,
+      });
+      setState(result.error ? "error" : "done");
+    } catch {
+      setState("error");
+    }
   }
   if (!token)
     return (
@@ -153,7 +200,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
       ) : null}
       <button className="auth-submit" disabled={state === "loading"}>
         {state === "loading" ? (
-          <LoaderCircle className="spin" />
+          <>
+            <LoaderCircle className="spin" /> Menyimpan kata sandi…
+          </>
         ) : (
           <>
             Simpan kata sandi <ArrowRight />
