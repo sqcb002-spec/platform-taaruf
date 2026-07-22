@@ -8,6 +8,8 @@ User=ubuntu
 WorkingDirectory=/home/ubuntu/platform-taaruf
 Environment=NODE_ENV=production
 Environment=PORT=3002
+EnvironmentFile=/home/ubuntu/platform-taaruf/.env.local
+ReadWritePaths=/var/lib/platform-taaruf/private
 ExecStart=/usr/bin/npm run start
 Restart=always
 RestartSec=5

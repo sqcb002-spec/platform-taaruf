@@ -1,0 +1,24 @@
+[Unit]
+Description=Platform Ta'aruf private document verification worker
+After=network.target platform-taaruf.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/platform-taaruf
+Environment=NODE_ENV=production
+EnvironmentFile=/home/ubuntu/platform-taaruf/.env.local
+ExecStart=/usr/bin/node workers/document-worker.mjs
+Restart=always
+RestartSec=10
+Nice=10
+CPUQuota=50%
+MemoryMax=700M
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/platform-taaruf/private
+
+[Install]
+WantedBy=multi-user.target

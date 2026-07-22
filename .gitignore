@@ -12,3 +12,4 @@ out/
 *.log
 .vercel/
 .DS_Store
+.private/

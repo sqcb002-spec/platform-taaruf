@@ -7,8 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "worker:documents": "node workers/document-worker.mjs"
   },
   "repository": {
     "type": "git",
@@ -23,6 +25,7 @@
   "homepage": "https://github.com/hmad28/platform-taaruf#readme",
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
+    "better-auth": "^1.6.23",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.25.0",
@@ -31,15 +34,18 @@
     "react-dom": "^19.2.8",
     "resend": "^6.18.0",
     "tailwind-merge": "^3.6.0",
+    "ws": "^8.21.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.1",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.11",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }

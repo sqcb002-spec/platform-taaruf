@@ -1,56 +1,70 @@
-# Platform Ta'aruf
+# Platform Ta’aruf Sunnah
 
-Platform ta'aruf digital yang dirancang untuk memfasilitasi proses menuju pernikahan dengan alur terarah, keterlibatan wali, pendampingan mediator, dan perlindungan data pribadi.
+Lembaga ta’aruf digital berbasis Next.js yang memfasilitasi proses menuju pernikahan secara terarah, melibatkan wali dan mediator, serta membatasi pembukaan data berdasarkan tahap dan kewenangan.
 
-## Status
+## Kapabilitas
 
-Repository ini masih berada pada tahap perencanaan produk dan fondasi teknis. Belum ada aplikasi yang dapat dijalankan.
+- Dashboard berbasis role untuk peserta, wali, mediator, admin ikhwan/akhwat, dan super admin.
+- Autentikasi email/password, verifikasi email, reset password, session database, dan OTP kedua untuk staf.
+- Biodata bertahap, tiga referensi, progres verifikasi, dan pembatasan akses data sensitif.
+- Matching dengan hard filter dan skor yang dapat dijelaskan.
+- Workflow pengajuan, consent peserta, approval wali, dialog terarah, nazhor, khitbah, hingga pengarsipan.
+- Penyimpanan dokumen privat terenkripsi di luar webroot dengan antrean antivirus dan OCR.
+- Notifikasi, moderasi, policy versioning, dan audit trail.
 
-Dokumen konsep utama tersedia di [Konsep Platform Ta'aruf Berbasis Syariat Islam](./Konsep_Platform_Taaruf_Berbasis_Syariat_Islam-Revisi_Biodata_Terbaru.md).
+## Stack
 
-## Prinsip Produk
+- Next.js 16, React 19, TypeScript
+- Neon PostgreSQL dan Drizzle ORM
+- Better Auth
+- Resend
+- Vitest
+- VPS Ubuntu, Nginx, dan systemd
 
-- Satu proses ta'aruf aktif untuk setiap peserta.
-- Persetujuan bertahap: peserta akhwat dan wali harus sama-sama menyetujui sebelum ta'aruf aktif.
-- Tidak ada swipe, chat bebas, feed, atau pertukaran kontak otomatis.
-- Data dibuka bertahap sesuai fase proses dan persetujuan pemilik data.
-- Foto hanya digunakan untuk verifikasi pada tahap awal; pembukaan kepada calon bersifat terbatas dan tercatat.
-- Admin dan mediator menjalankan SOP; prinsip syariah dan etik ditetapkan oleh Dewan Syariah dan Etik Platform.
+## Menjalankan Secara Lokal
 
-## Rencana Stack
+```bash
+npm install
+cp .env.example .env.local
+npm run db:migrate
+npm run dev
+```
 
-- Next.js
-- PostgreSQL (Neon untuk pengembangan/pilot)
-- Drizzle ORM
-- Resend untuk email transaksional
-- UploadThing hanya untuk aset yang sesuai kebijakan privasi; dokumen identitas harus memakai penyimpanan privat dengan akses terbatas
-- VPS untuk deployment produksi awal
-
-## Konfigurasi Lokal
-
-1. Salin `.env.example` menjadi `.env.local`.
-2. Isi seluruh nilai lingkungan di komputer lokal.
-3. Jangan pernah commit `.env.local`, kredensial database, token email, token upload, maupun akses VPS.
+Gunakan Node.js 22 atau versi kompatibel dengan Next.js 16. Isi seluruh variabel pada `.env.local`; jangan commit file tersebut.
 
 ## Variabel Lingkungan
 
 | Variabel | Kegunaan |
 | --- | --- |
-| `RESEND_API_KEY` | Mengirim email transaksional. |
-| `DATABASE_URL` | Koneksi PostgreSQL. |
-| `UPLOADTHING_TOKEN` | Token UploadThing. |
-| `UPLOADTHING_SECRET` | Secret UploadThing. |
-| `UPLOADTHING_APP_ID` | App ID UploadThing. |
+| `DATABASE_URL` | Koneksi PostgreSQL Neon. |
+| `RESEND_API_KEY` | Verifikasi email, reset password, notifikasi, dan OTP staf. |
+| `BETTER_AUTH_SECRET` | Secret session produksi minimal 32 byte. |
+| `BETTER_AUTH_URL` | Origin aplikasi, misalnya `https://platformtaarufsunnah.my.id`. |
+| `PRIVATE_STORAGE_PATH` | Direktori privat di luar webroot. |
+| `DOCUMENT_ENCRYPTION_KEY` | Kunci enkripsi dokumen dan hasil OCR. |
+| `NIK_HMAC_KEY` | Kunci fingerprint NIK untuk deteksi duplikat. |
 
-## Roadmap
+Token UploadThing tetap tersedia untuk aset yang tidak sensitif, tetapi KTP, foto verifikasi, dan foto peserta tidak boleh disimpan sebagai aset publik.
 
-1. Sahkan SOP versi pertama bersama Dewan Syariah dan Etik.
-2. Susun DPIA, inventaris data, retensi data, dan matriks kontrol akses.
-3. Rancang state machine proses ta'aruf, consent, audit log, dan peran pengguna.
-4. Bangun fondasi Next.js, autentikasi, RBAC, database, dan deployment aman.
-5. Bangun MVP onboarding, biodata bertahap, verifikasi, matching terbatas, serta workflow ta'aruf.
-6. Jalankan pilot tertutup, audit keamanan/privasi, lalu lakukan peluncuran bertahap.
+## Perintah
 
-## Keamanan Data
+```bash
+npm run dev              # development server
+npm run build            # production build dan type-check
+npm test                 # unit test
+npm run db:generate      # membuat migration Drizzle
+npm run db:migrate       # menjalankan migration
+npm run worker:documents # worker antivirus dan OCR
+```
 
-Platform ini akan memproses data pribadi dan data sensitif. Setiap perubahan fitur harus mengikuti kebijakan akses berbasis peran, consent yang dapat dibuktikan, audit trail, dan SOP yang berlaku. Hindari menyimpan atau membagikan dokumen identitas sebagai file publik.
+Worker dokumen membutuhkan `clamav`, `tesseract-ocr`, dan data bahasa Indonesia. File systemd tersedia di `deploy/` dan menjalankan worker dengan CPU/RAM limit terpisah dari web process.
+
+## Prinsip Keamanan
+
+- Satu peserta hanya boleh memiliki satu proses ta’aruf aktif.
+- Consent peserta dan wali dicatat terpisah dengan versi SOP.
+- Foto dan data sensitif tidak dibuka otomatis.
+- Dokumen identitas disimpan terenkripsi, tidak memiliki URL publik, dan setiap view diaudit.
+- Admin gender hanya menangani peserta yang menjadi wilayah kerjanya; mediator hanya melihat proses yang ditugaskan.
+
+Konsep produk lengkap tersedia di [dokumen konsep](./Konsep_Platform_Taaruf_Berbasis_Syariat_Islam-Revisi_Biodata_Terbaru.md).
