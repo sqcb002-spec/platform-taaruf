@@ -13,6 +13,7 @@ import { roleLabels } from "@/lib/roles";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { retryTransientRead } from "@/lib/retry";
 
 const roleContent = {
   participant_male: {
@@ -71,11 +72,13 @@ export default async function DashboardPage() {
   const content = roleContent[user.role];
   const isParticipant = user.role.startsWith("participant_");
   const [profile] = isParticipant
-    ? await db
-        .select({ completionPercent: profiles.completionPercent })
-        .from(profiles)
-        .where(eq(profiles.userId, user.id))
-        .limit(1)
+    ? await retryTransientRead(() =>
+        db
+          .select({ completionPercent: profiles.completionPercent })
+          .from(profiles)
+          .where(eq(profiles.userId, user.id))
+          .limit(1),
+      )
     : [];
   const progress = isParticipant
     ? (profile?.completionPercent ?? 0)

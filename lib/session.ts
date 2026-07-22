@@ -3,10 +3,14 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import type { AppRole } from "@/lib/roles";
+import { retryTransientRead } from "@/lib/retry";
 
-export const getSession = cache(async () =>
-  auth.api.getSession({ headers: await headers() }),
-);
+export const getSession = cache(async () => {
+  const requestHeaders = await headers();
+  return retryTransientRead(() =>
+    auth.api.getSession({ headers: requestHeaders }),
+  );
+});
 
 export async function requireSession() {
   const session = await getSession();

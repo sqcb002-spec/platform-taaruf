@@ -18,6 +18,7 @@ import { DocumentUpload } from "@/app/components/DocumentUpload";
 import { db } from "@/db";
 import { profileSections } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { retryTransientRead } from "@/lib/retry";
 
 function ProfileCoreForm({ role }: { role: string }) {
   return (
@@ -295,10 +296,12 @@ export default async function DashboardSectionPage({
           completed={
             new Set(
               (
-                await db
-                  .select({ key: profileSections.key })
-                  .from(profileSections)
-                  .where(eq(profileSections.userId, user.id))
+                await retryTransientRead(() =>
+                  db
+                    .select({ key: profileSections.key })
+                    .from(profileSections)
+                    .where(eq(profileSections.userId, user.id)),
+                )
               ).map((item) => item.key),
             )
           }

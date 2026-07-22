@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { auditLogs, documents, users } from "@/db/schema";
 import { decryptBuffer } from "@/lib/crypto";
 import { getSession } from "@/lib/session";
+import { retryTransientRead } from "@/lib/retry";
 
 export const runtime = "nodejs";
 
@@ -17,12 +18,14 @@ export async function GET(
   if (!session)
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   const { id } = await params;
-  const [record] = await db
-    .select({ document: documents, ownerRole: users.role })
-    .from(documents)
-    .innerJoin(users, eq(users.id, documents.ownerId))
-    .where(eq(documents.id, id))
-    .limit(1);
+  const [record] = await retryTransientRead(() =>
+    db
+      .select({ document: documents, ownerRole: users.role })
+      .from(documents)
+      .innerJoin(users, eq(users.id, documents.ownerId))
+      .where(eq(documents.id, id))
+      .limit(1),
+  );
   if (!record)
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   const viewer = session.user as typeof session.user & { role: string };
