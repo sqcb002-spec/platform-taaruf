@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { env } from "@/config";
-import { db } from "@/db/index";
+import { db, transactionalDb } from "@/db/index";
 import { auditLogs, users } from "@/db/schema";
 
 const requestedEmail = process.argv[2] ?? process.env.SEED_SUPER_ADMIN_EMAIL ?? "sqcb.002@gmail.com";
@@ -31,7 +31,7 @@ async function seedSuperAdmin() {
 
   const needsUpdate = created || user.role !== "super_admin" || !user.emailVerified || user.status !== "active_search";
   if (needsUpdate) {
-    await db.transaction(async (tx) => {
+    await transactionalDb.transaction(async (tx) => {
       await tx.update(users).set({
         role: "super_admin",
         status: "active_search",
