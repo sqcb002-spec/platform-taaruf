@@ -68,6 +68,7 @@ Yang sudah tersedia di codebase:
 
 - Landing page dan portal/dashboard responsif berbasis role.
 - Registrasi, login, verifikasi email, reset password, session database, dan 2FA staf melalui Better Auth.
+- Google OAuth untuk login akun lama dan pendaftaran peserta baru dengan role yang divalidasi server-side.
 - Biodata bertahap dengan enkripsi untuk jawaban sensitif dan perhitungan progres.
 - Upload JPEG/PNG maksimal 5 MB ke penyimpanan privat terenkripsi.
 - Worker pemeriksaan malware dan OCR dokumen.
@@ -158,6 +159,8 @@ Alamat development:
 | `NEXT_PUBLIC_LANDING_URL` | Dashboard | URL kembali ke landing. |
 | `RESEND_API_KEY` | API | Pengiriman email transaksional. |
 | `EMAIL_FROM` | API | Identitas pengirim yang telah diverifikasi. |
+| `GOOGLE_CLIENT_ID` | API | OAuth Client ID Google; server-only. |
+| `GOOGLE_CLIENT_SECRET` | API | OAuth Client Secret Google; server-only. |
 | `PRIVATE_STORAGE_PATH` | API, worker | Direktori privat di luar webroot. |
 | `DOCUMENT_ENCRYPTION_KEY` | API, worker | Material kunci enkripsi dokumen dan OCR. |
 | `NIK_HMAC_KEY` | API | Kunci fingerprint NIK. |
@@ -185,6 +188,28 @@ npm run seed:super-admin --workspace=@taaruf/api -- admin@example.com
 ```
 
 Seed bersifat idempotent: akun dibuat atau dipromosikan menjadi `super_admin`, email ditandai terverifikasi, dan perubahan dicatat pada audit log. Jika akun baru dibuat, sistem juga mengirim tautan pengaturan kata sandi.
+
+## Google OAuth
+
+Integrasi menggunakan social provider Better Auth. Akun Google yang emailnya sama dengan akun lama dapat ditautkan oleh Better Auth setelah email dari provider terverifikasi. Pendaftaran Google baru tetap meminta pilihan Ikhwan/Akhwat dan konfirmasi usia; data tersebut dibawa melalui OAuth state lalu divalidasi oleh backend.
+
+### Konfigurasi Google Cloud
+
+1. Buka **Google Cloud Console → Google Auth Platform**.
+2. Konfigurasikan branding, audience, dan test users selama aplikasi masih dalam mode pengujian.
+3. Buat OAuth Client dengan tipe **Web application**.
+4. Tambahkan authorized JavaScript origins:
+   - `http://localhost:3001`
+   - `https://dashboard.platformtaarufsunnah.my.id`
+5. Tambahkan authorized redirect URIs berikut secara persis:
+   - `http://localhost:3003/api/auth/callback/google`
+   - `https://api.platformtaarufsunnah.my.id/api/auth/callback/google`
+6. Simpan Client ID dan Client Secret sebagai `GOOGLE_CLIENT_ID` serta `GOOGLE_CLIENT_SECRET` pada environment API.
+
+> [!CAUTION]
+> Jangan menaruh Google Client Secret di Vercel dashboard, variabel `NEXT_PUBLIC_*`, source code, atau repository. Callback dibentuk dari `API_PUBLIC_URL`; nilainya harus memakai origin API production yang benar.
+
+Provider otomatis disembunyikan dari halaman masuk/daftar jika kedua environment variable Google belum tersedia. Mengisi hanya salah satunya akan membuat API gagal startup agar kesalahan konfigurasi tidak lolos diam-diam.
 
 ## Deployment
 

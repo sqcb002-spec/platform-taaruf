@@ -11,7 +11,7 @@ import { toNodeHandler } from "better-auth/node";
 import { and, count, eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { allowedOrigins, env } from "@/config";
+import { allowedOrigins, env, googleOAuthEnabled } from "@/config";
 import { db } from "@/db/index";
 import { auditLogs, documents, jobs, profileSections, profiles, users } from "@/db/schema";
 import { decryptBuffer, encryptBuffer, encryptJson } from "@/lib/crypto";
@@ -36,6 +36,11 @@ app.use(cors({
 // Better Auth must receive the untouched body before express.json().
 app.all("/api/auth/*splat", toNodeHandler(auth));
 app.use(express.json({ limit: "1mb" }));
+
+app.get("/api/public/auth-providers", (_req, res) => {
+  res.set("cache-control", "public, max-age=60, stale-while-revalidate=300");
+  res.json({ data: { google: googleOAuthEnabled } });
+});
 
 const asyncRoute = (handler: (req: Request, res: Response) => Promise<unknown>) =>
   (req: Request, res: Response, next: NextFunction) => Promise.resolve(handler(req, res)).catch(next);

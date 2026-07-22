@@ -168,6 +168,61 @@
 .auth-submit:disabled {
   opacity: 0.6;
 }
+.google-auth-button {
+  min-height: 3.25rem;
+  padding: 0.8rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-pill);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  white-space: nowrap;
+  transition:
+    transform var(--dur-short) var(--ease-out),
+    border-color var(--dur-short) var(--ease-out),
+    background-color var(--dur-short) var(--ease-out),
+    box-shadow var(--dur-short) var(--ease-out);
+}
+.google-auth-button svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+}
+.google-auth-button:focus-visible,
+.auth-submit:focus-visible,
+.auth-links a:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.google-auth-button:active {
+  transform: translateY(1px);
+}
+.google-auth-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.auth-divider {
+  min-height: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--color-rule);
+}
 .auth-links {
   display: flex;
   justify-content: space-between;
@@ -198,9 +253,7 @@
 .auth-success a {
   font-weight: 800;
 }
-.form-error {
-  color: #9b2f28;
-}
+.form-error { color: var(--color-accent-deep); }
 .spin {
   animation: auth-spin 1s linear infinite;
 }
@@ -218,4 +271,15 @@
     position: sticky;
     top: 0;
   }
+}
+@media (hover: hover) and (pointer: fine) {
+  .google-auth-button:not(:disabled):hover {
+    transform: translateY(-1px);
+    border-color: var(--color-accent);
+    background: var(--color-cyan-soft);
+    box-shadow: 0 0.55rem 1.5rem color-mix(in oklch, var(--color-ink) 8%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .google-auth-button { transition: none; }
 }

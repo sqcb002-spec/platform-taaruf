@@ -1,11 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { betterAuth } from "better-auth";
+import { getOAuthState } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { twoFactor } from "better-auth/plugins";
 import { Resend } from "resend";
 import { db } from "@/db/index";
 import * as schema from "@/db/schema";
-import { env } from "@/config";
+import { env, googleOAuthEnabled } from "@/config";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
@@ -37,12 +38,32 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (user) => ({
-          data: { ...user, displayCode: `TS-${randomBytes(4).toString("hex").toUpperCase()}` },
-        }),
+        before: async (user) => {
+          const oauthState = await getOAuthState();
+          if (oauthState && oauthState.ageConfirmed !== true) return false;
+          const requestedRole = oauthState?.participantRole;
+          if (oauthState && requestedRole !== "participant_male" && requestedRole !== "participant_female") return false;
+          const participantRole = requestedRole === "participant_female"
+            ? "participant_female"
+            : "participant_male";
+          return {
+            data: {
+              ...user,
+              ...(oauthState ? { role: participantRole, status: "profile_incomplete" } : {}),
+              displayCode: `TS-${randomBytes(4).toString("hex").toUpperCase()}`,
+            },
+          };
+        },
       },
     },
   },
+  socialProviders: googleOAuthEnabled ? {
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID!,
+      clientSecret: env.GOOGLE_CLIENT_SECRET!,
+      disableImplicitSignUp: true,
+    },
+  } : {},
   advanced: { useSecureCookies: env.NODE_ENV === "production" },
   user: {
     modelName: "users",
