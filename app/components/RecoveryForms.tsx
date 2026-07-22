@@ -91,3 +91,75 @@ export function StaffOtpForm() {
     </div>
   );
 }
+
+export function ResetPasswordForm({ token }: { token: string }) {
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error">(
+    "idle",
+  );
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setState("loading");
+    const data = new FormData(event.currentTarget);
+    const password = String(data.get("password"));
+    if (password !== String(data.get("confirmation"))) return setState("error");
+    const result = await authClient.resetPassword({
+      newPassword: password,
+      token,
+    });
+    setState(result.error ? "error" : "done");
+  }
+  if (!token)
+    return (
+      <p className="form-error">
+        Tautan reset tidak valid atau telah kedaluwarsa.
+      </p>
+    );
+  if (state === "done")
+    return (
+      <div className="auth-success">
+        <strong>Kata sandi telah diperbarui.</strong>
+        <p>Silakan masuk kembali menggunakan kata sandi baru.</p>
+        <a href="/masuk">Masuk ke akun →</a>
+      </div>
+    );
+  return (
+    <form className="auth-form" onSubmit={submit}>
+      <label>
+        Kata sandi baru
+        <input
+          name="password"
+          type="password"
+          minLength={12}
+          maxLength={128}
+          required
+          autoComplete="new-password"
+        />
+      </label>
+      <label>
+        Konfirmasi kata sandi
+        <input
+          name="confirmation"
+          type="password"
+          minLength={12}
+          maxLength={128}
+          required
+          autoComplete="new-password"
+        />
+      </label>
+      {state === "error" ? (
+        <p className="form-error">
+          Tautan tidak valid atau kedua kata sandi belum sesuai.
+        </p>
+      ) : null}
+      <button className="auth-submit" disabled={state === "loading"}>
+        {state === "loading" ? (
+          <LoaderCircle className="spin" />
+        ) : (
+          <>
+            Simpan kata sandi <ArrowRight />
+          </>
+        )}
+      </button>
+    </form>
+  );
+}
