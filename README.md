@@ -1,64 +1,134 @@
 # Platform Ta’aruf Sunnah
 
-Platform ta’aruf digital yang memfasilitasi ikhtiar menuju pernikahan secara terarah, melibatkan wali dan mediator, serta membuka data berdasarkan tahap dan kewenangan.
+<p align="center">
+  <strong>Platform ta’aruf digital dengan persetujuan berlapis, keterlibatan wali, dan pembukaan data secara bertahap.</strong>
+</p>
 
-Repository ini menggunakan monorepo dengan landing page, dashboard, dan backend yang dapat dirilis secara independen. Dokumen konsep produk lengkap tersedia di [Konsep Platform Ta’aruf](./Konsep_Platform_Taaruf_Berbasis_Syariat_Islam-Revisi_Biodata_Terbaru.md).
+<p align="center">
+  <img alt="Node.js 22+" src="https://img.shields.io/badge/Node.js-22%2B-315c46?style=flat-square">
+  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-1f2f28?style=flat-square">
+  <img alt="Express 5" src="https://img.shields.io/badge/Express-5-315c46?style=flat-square">
+  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-Neon-5f715f?style=flat-square">
+  <img alt="Status" src="https://img.shields.io/badge/status-active_development-a57945?style=flat-square">
+</p>
+
+Platform Ta’aruf Sunnah dirancang untuk membantu muslim dan muslimah menjalani proses ta’aruf secara terarah—bukan sebagai aplikasi kencan, katalog foto, atau ruang chat bebas. Produk memisahkan keputusan peserta, wali, mediator, dan petugas agar setiap tindakan memiliki batas kewenangan serta jejak audit.
+
+> [!IMPORTANT]
+> Platform ini masih dalam pengembangan aktif. Klaim “sesuai syariat” tidak menggantikan peninjauan dan pengesahan SOP oleh Dewan Syariah yang memiliki mandat formal.
+
+Dokumen konsep produk selengkapnya tersedia di [Konsep Platform Ta’aruf Berbasis Syariat Islam](./Konsep_Platform_Taaruf_Berbasis_Syariat_Islam-Revisi_Biodata_Terbaru.md).
+
+## Prinsip Produk
+
+- **Dual consent** — keputusan akhwat dan wali dicatat terpisah; salah satu pihak dapat menolak.
+- **Progressive disclosure** — identitas, foto, kesehatan, dan data sensitif tidak dibuka sekaligus.
+- **Satu proses aktif** — peserta difokuskan pada satu proses ta’aruf setelah persetujuan berlapis terpenuhi.
+- **Role-based access** — peserta, wali, mediator, admin gender, dan super admin memperoleh ruang serta kewenangan berbeda.
+- **Auditable by design** — akses dokumen, perubahan profil, persetujuan, dan tindakan petugas menghasilkan jejak audit.
+- **Privacy first** — dokumen identitas disimpan terenkripsi di luar webroot dan tidak memiliki URL publik permanen.
 
 ## Arsitektur
 
-```text
-platformtaarufsunnah.my.id             Next.js landing (Vercel)
-dashboard.platformtaarufsunnah.my.id   Next.js dashboard (Vercel)
-api.platformtaarufsunnah.my.id         Express API (VPS + Nginx)
-                                         ├── Better Auth
-                                         ├── Drizzle + Neon PostgreSQL
-                                         ├── Resend
-                                         └── private document worker
+```mermaid
+flowchart LR
+    Visitor[Pengunjung] --> Landing[Landing Page<br/>Next.js · Vercel]
+    Member[Peserta / Wali / Staf] --> Dashboard[Member Portal & Dashboard<br/>Next.js · Vercel]
+    Dashboard -->|HTTPS + secure cookie| API[Express API<br/>VPS · Nginx · systemd]
+    API --> Auth[Better Auth]
+    API --> DB[(Neon PostgreSQL)]
+    API --> Mail[Resend]
+    API --> Storage[(Private encrypted storage)]
+    Storage --> Worker[ClamAV + Tesseract worker]
+    Worker --> DB
 ```
 
-Dashboard tidak mengakses database dari React Server Components. Seluruh data operasional diambil melalui API dengan loading, retry, dan error state yang tidak menjatuhkan keseluruhan halaman.
+| Aplikasi | Workspace | Port lokal | Target deployment |
+| --- | --- | ---: | --- |
+| Landing | `apps/landing` | `3000` | Vercel · `platformtaarufsunnah.my.id` |
+| Portal dan dashboard | `apps/dashboard` | `3001` | Vercel · `dashboard.platformtaarufsunnah.my.id` |
+| API dan auth | `apps/api` | `3003` | VPS · `api.platformtaarufsunnah.my.id` |
+| Document worker | `apps/api/src/worker.mjs` | — | VPS · systemd |
 
-## Kapabilitas
+Dashboard tidak mengakses database langsung dari React Server Components. Seluruh data operasional melewati API dengan loading skeleton, retry, error boundary, dan state pemulihan.
 
-- Dashboard berbasis role untuk peserta, wali, mediator, admin ikhwan/akhwat, dan super admin.
-- Better Auth dengan email/password, verifikasi email, reset password, session database, dan OTP staf.
-- Biodata bertahap, data sensitif terenkripsi, progres kelengkapan, dan verifikasi identitas.
-- Workflow pengajuan, persetujuan peserta dan wali, mediator, nazhor, khitbah, serta audit trail.
-- Dokumen privat terenkripsi di luar webroot, berikut worker antivirus dan OCR.
-- API error envelope, request logging, CORS allowlist, security headers, dan health checks.
+## Pengalaman Berdasarkan Peran
+
+| Peran | Pengalaman utama |
+| --- | --- |
+| Peserta ikhwan/akhwat | Portal personal, biodata bertahap, rekomendasi terbatas, pengajuan, dan perjalanan ta’aruf. |
+| Wali | Portal ringan untuk hubungan wali, persetujuan, jadwal nazhor, dan riwayat keputusan. |
+| Mediator | Dashboard penugasan, dialog terarah, pemeriksaan referensi, dan pendampingan proses. |
+| Admin ikhwan/akhwat | Antrean verifikasi dan akses peserta sesuai gender serta kewenangan. |
+| Super admin | Operasional sistem, staf internal, kebijakan, moderasi, dan audit. |
+
+## Status Implementasi
+
+Yang sudah tersedia di codebase:
+
+- Landing page dan portal/dashboard responsif berbasis role.
+- Registrasi, login, verifikasi email, reset password, session database, dan 2FA staf melalui Better Auth.
+- Biodata bertahap dengan enkripsi untuk jawaban sensitif dan perhitungan progres.
+- Upload JPEG/PNG maksimal 5 MB ke penyimpanan privat terenkripsi.
+- Worker pemeriksaan malware dan OCR dokumen.
+- API health/readiness, CORS allowlist, Helmet, request logging, dan error envelope.
+- Skema database untuk wali, rekomendasi, consent, proses ta’aruf, nazhor, moderasi, kebijakan, notifikasi, dan audit.
+
+Sebagian workflow lanjutan pada skema—seperti matching penuh, persetujuan bertingkat, dialog mediator, nazhor, khitbah, serta moderasi—masih memerlukan endpoint dan UI operasional lanjutan sebelum production launch.
 
 ## Struktur Repository
 
 ```text
-apps/
-  landing/      Landing page Next.js, port 3000
-  dashboard/    Dashboard dan halaman autentikasi Next.js, port 3001
-  api/          Express API dan document worker, port 3003
-deploy/         Unit systemd dan konfigurasi Nginx
-drizzle/        Riwayat migration PostgreSQL
+platform-taaruf/
+├── apps/
+│   ├── landing/       # Landing page publik
+│   ├── dashboard/     # Auth, portal peserta/wali, dan dashboard staf
+│   └── api/           # Express API, Better Auth, Drizzle, dan worker
+├── deploy/            # Unit systemd dan konfigurasi Nginx
+├── drizzle/           # Migration dan metadata PostgreSQL
+├── design.md          # Design system dan arah visual
+├── .env.example       # Daftar environment variable tanpa secret
+└── Konsep_*.md        # Konsep produk serta biodata lengkap
 ```
 
 ## Prasyarat
 
-- Node.js 22 atau lebih baru
+- Node.js `22` atau lebih baru
 - npm
-- PostgreSQL/Neon yang telah menjalankan migration
-- Untuk worker: ClamAV, Tesseract OCR, dan language pack Indonesia
+- PostgreSQL atau project Neon
+- ClamAV, Tesseract OCR, serta language pack `ind` untuk document worker
 
-Backend dan database sebaiknya berada di region yang berdekatan. Deployment VPS Jakarta dirancang menggunakan Neon Singapore untuk menghindari latensi dan timeout lintas benua.
+Untuk deployment VPS Jakarta, gunakan database di region yang dekat—misalnya Neon Singapore—untuk menghindari timeout dan latensi lintas benua.
 
-## Instalasi
+## Memulai Secara Lokal
+
+### 1. Instal dependency
 
 ```bash
-npm install
+git clone https://github.com/sqcb002-spec/platform-taaruf.git
+cd platform-taaruf
+npm ci
+```
+
+### 2. Siapkan environment
+
+```bash
 cp .env.example .env.local
 ```
 
-Isi variabel environment menggunakan secret development. Jangan commit `.env.local` atau kredensial produksi.
+Isi `.env.local` dengan kredensial development. API membaca konfigurasi dari `process.env`, sedangkan environment publik Next.js harus tersedia pada workspace terkait atau dikonfigurasi melalui platform deployment.
 
-## Menjalankan Lokal
+Jangan pernah commit `.env.local`, connection string database, token email, maupun kunci enkripsi.
 
-Jalankan setiap proses di terminal terpisah:
+### 3. Jalankan migration
+
+```bash
+npm run db:migrate --workspace=@taaruf/api
+```
+
+### 4. Jalankan service
+
+Buka tiga terminal terpisah:
 
 ```bash
 npm run dev:landing
@@ -66,62 +136,108 @@ npm run dev:dashboard
 npm run dev:api
 ```
 
-Alamat lokal:
+Alamat development:
 
 - Landing: `http://localhost:3000`
-- Dashboard: `http://localhost:3001`
+- Portal/dashboard: `http://localhost:3001`
 - API: `http://localhost:3003`
 - Health check: `http://localhost:3003/health`
 - Database readiness: `http://localhost:3003/ready`
 
-## Konfigurasi
+## Environment Variables
 
-| Variabel | Digunakan oleh | Kegunaan |
+| Variabel | Scope | Keterangan |
 | --- | --- | --- |
-| `DATABASE_URL` | API, worker | Koneksi PostgreSQL Neon. |
-| `BETTER_AUTH_SECRET` | API | Secret session minimal 32 karakter. |
-| `API_PUBLIC_URL` | API | Origin publik API. |
-| `DASHBOARD_ORIGIN` | API | Origin dashboard yang diizinkan oleh CORS/auth. |
+| `DATABASE_URL` | API, worker | Connection string PostgreSQL/Neon. |
+| `BETTER_AUTH_SECRET` | API | Secret autentikasi minimal 32 karakter. |
+| `API_PUBLIC_URL` | API | Origin publik backend. |
+| `DASHBOARD_ORIGIN` | API | Origin dashboard untuk auth dan CORS. |
 | `LANDING_ORIGIN` | API | Origin landing yang dipercaya. |
-| `NEXT_PUBLIC_API_URL` | Dashboard | Alamat API dari browser. |
-| `NEXT_PUBLIC_DASHBOARD_URL` | Landing | Alamat dashboard untuk CTA dan login. |
-| `NEXT_PUBLIC_LANDING_URL` | Dashboard | Alamat landing untuk navigasi balik. |
-| `RESEND_API_KEY` | API | Email verifikasi, reset password, dan OTP. |
-| `EMAIL_FROM` | API | Identitas pengirim email terverifikasi. |
-| `PRIVATE_STORAGE_PATH` | API, worker | Direktori dokumen privat di luar webroot. |
-| `DOCUMENT_ENCRYPTION_KEY` | API, worker | Kunci enkripsi dokumen dan hasil OCR. |
+| `NEXT_PUBLIC_API_URL` | Dashboard | Base URL API dari browser. |
+| `NEXT_PUBLIC_DASHBOARD_URL` | Landing | Tujuan CTA pendaftaran dan login. |
+| `NEXT_PUBLIC_LANDING_URL` | Dashboard | URL kembali ke landing. |
+| `RESEND_API_KEY` | API | Pengiriman email transaksional. |
+| `EMAIL_FROM` | API | Identitas pengirim yang telah diverifikasi. |
+| `PRIVATE_STORAGE_PATH` | API, worker | Direktori privat di luar webroot. |
+| `DOCUMENT_ENCRYPTION_KEY` | API, worker | Material kunci enkripsi dokumen dan OCR. |
 | `NIK_HMAC_KEY` | API | Kunci fingerprint NIK. |
 
-## Perintah
+Lihat [.env.example](./.env.example) sebagai sumber daftar variabel terbaru.
+
+## Perintah Penting
+
+| Perintah | Fungsi |
+| --- | --- |
+| `npm run build` | Build seluruh workspace. |
+| `npm run build:landing` | Build landing saja. |
+| `npm run build:dashboard` | Build portal/dashboard saja. |
+| `npm run build:api` | Bundle Express API. |
+| `npm test` | Menjalankan test seluruh workspace. |
+| `npm run lint` | ESLint dan TypeScript checking. |
+| `npm run db:generate --workspace=@taaruf/api` | Membuat migration Drizzle. |
+| `npm run db:migrate --workspace=@taaruf/api` | Menjalankan migration database. |
+| `npm run worker --workspace=@taaruf/api` | Menjalankan document worker. |
+
+### Seed super admin
 
 ```bash
-npm run build             # build seluruh workspace
-npm run build:landing     # build landing saja
-npm run build:dashboard   # build dashboard saja
-npm run build:api         # bundle Express API
-npm test                  # unit test seluruh workspace
-npm run lint              # lint/type-check seluruh workspace
-npm run db:migrate --workspace=@taaruf/api
-npm run worker --workspace=@taaruf/api
+npm run seed:super-admin --workspace=@taaruf/api -- admin@example.com
 ```
+
+Seed bersifat idempotent: akun dibuat atau dipromosikan menjadi `super_admin`, email ditandai terverifikasi, dan perubahan dicatat pada audit log. Jika akun baru dibuat, sistem juga mengirim tautan pengaturan kata sandi.
 
 ## Deployment
 
-Landing dan dashboard merupakan dua project Vercel dengan root directory masing-masing `apps/landing` dan `apps/dashboard`.
+### Vercel
 
-API berjalan pada `127.0.0.1:3003`, dijaga systemd, dan diteruskan Nginx melalui `api.platformtaarufsunnah.my.id`. File siap pakai tersedia di `deploy/`:
+Buat dua project terpisah dengan root directory:
+
+- `apps/landing`
+- `apps/dashboard`
+
+Pasang environment variable publik sesuai aplikasi, lalu arahkan domain setelah deployment berstatus `Ready`.
+
+### VPS
+
+API berjalan pada `127.0.0.1:3003` dan tidak diekspos langsung. Nginx menangani trafik publik, sedangkan systemd menjaga API serta worker tetap aktif.
+
+Template deployment tersedia di [`deploy/`](./deploy):
 
 - `platform-taaruf-api.service`
 - `platform-taaruf-v2-worker.service`
 - `nginx-platform-taaruf-api.conf`
 
-Lakukan deployment ke port dan direktori baru terlebih dahulu. Hentikan aplikasi lama dan hapus artefaknya hanya setelah health check, auth, biodata, upload, dan smoke test production lolos.
+Urutan rilis yang disarankan:
 
-## Batas Keamanan
+1. Jalankan migration pada database target.
+2. Build API dan pasang environment production.
+3. Aktifkan API serta worker pada port internal.
+4. Pastikan `/health` dan `/ready` berhasil.
+5. Uji auth, biodata, upload, serta akses dokumen.
+6. Baru arahkan DNS dan hentikan aplikasi lama.
 
-- Satu peserta hanya dapat memiliki satu proses ta’aruf aktif.
-- Persetujuan peserta dan wali dicatat terpisah dengan versi SOP.
-- Foto dan data sensitif tidak dibuka otomatis.
-- Dokumen identitas tidak memiliki URL publik dan setiap akses diaudit.
-- Cookie session hanya dikirim melalui HTTPS dan origin API dibatasi eksplisit.
-- Admin gender dan mediator hanya memperoleh data yang menjadi kewenangannya.
+## Model Keamanan
+
+- Session cookie hanya digunakan melalui HTTPS pada production.
+- CORS dibatasi pada landing dan dashboard yang telah dikonfigurasi.
+- Password minimum 12 karakter dan akun staf mendukung 2FA.
+- Dokumen diverifikasi berdasarkan magic bytes, bukan hanya ekstensi file.
+- File privat menggunakan AES-256-GCM dan permission filesystem terbatas.
+- Dokumen identitas dikirim dengan `Cache-Control: private, no-store`.
+- Akses dokumen dibatasi berdasarkan pemilik, admin gender, atau super admin.
+- Data sensitif biodata disimpan sebagai encrypted payload.
+- Setiap akses penting menghasilkan audit log.
+
+## Governance Syariah dan Privasi
+
+Developer menerjemahkan SOP menjadi aturan sistem; developer bukan penentu hukum fikih. Sebelum production launch, proyek membutuhkan Dewan Syariah dan Etik formal, SOP berversi, mekanisme konflik kepentingan, serta peninjauan privasi/DPIA untuk pemrosesan data berisiko tinggi.
+
+Gunakan klaim publik yang proporsional selama proses tersebut belum selesai:
+
+> “Platform dirancang untuk memfasilitasi proses ta’aruf dengan menjaga prinsip-prinsip syariat.”
+
+---
+
+<p align="center">
+  Dibangun sebagai ikhtiar teknologi yang menjaga adab, amanah, dan privasi.
+</p>
