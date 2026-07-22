@@ -1,0 +1,24 @@
+[Unit]
+Description=Platform Ta'aruf v2 document verification worker
+After=network-online.target platform-taaruf-api.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/platform-taaruf-v2
+Environment=NODE_ENV=production
+EnvironmentFile=/home/ubuntu/platform-taaruf-v2/.env.api
+ExecStart=/usr/bin/npm run worker --workspace=@taaruf/api
+Restart=always
+RestartSec=10
+Nice=10
+CPUQuota=50%
+MemoryMax=700M
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/platform-taaruf/private
+
+[Install]
+WantedBy=multi-user.target

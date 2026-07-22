@@ -1,70 +1,127 @@
 # Platform Ta’aruf Sunnah
 
-Lembaga ta’aruf digital berbasis Next.js yang memfasilitasi proses menuju pernikahan secara terarah, melibatkan wali dan mediator, serta membatasi pembukaan data berdasarkan tahap dan kewenangan.
+Platform ta’aruf digital yang memfasilitasi ikhtiar menuju pernikahan secara terarah, melibatkan wali dan mediator, serta membuka data berdasarkan tahap dan kewenangan.
+
+Repository ini menggunakan monorepo dengan landing page, dashboard, dan backend yang dapat dirilis secara independen. Dokumen konsep produk lengkap tersedia di [Konsep Platform Ta’aruf](./Konsep_Platform_Taaruf_Berbasis_Syariat_Islam-Revisi_Biodata_Terbaru.md).
+
+## Arsitektur
+
+```text
+platformtaarufsunnah.my.id             Next.js landing (Vercel)
+dashboard.platformtaarufsunnah.my.id   Next.js dashboard (Vercel)
+api.platformtaarufsunnah.my.id         Express API (VPS + Nginx)
+                                         ├── Better Auth
+                                         ├── Drizzle + Neon PostgreSQL
+                                         ├── Resend
+                                         └── private document worker
+```
+
+Dashboard tidak mengakses database dari React Server Components. Seluruh data operasional diambil melalui API dengan loading, retry, dan error state yang tidak menjatuhkan keseluruhan halaman.
 
 ## Kapabilitas
 
 - Dashboard berbasis role untuk peserta, wali, mediator, admin ikhwan/akhwat, dan super admin.
-- Autentikasi email/password, verifikasi email, reset password, session database, dan OTP kedua untuk staf.
-- Biodata bertahap, tiga referensi, progres verifikasi, dan pembatasan akses data sensitif.
-- Matching dengan hard filter dan skor yang dapat dijelaskan.
-- Workflow pengajuan, consent peserta, approval wali, dialog terarah, nazhor, khitbah, hingga pengarsipan.
-- Penyimpanan dokumen privat terenkripsi di luar webroot dengan antrean antivirus dan OCR.
-- Notifikasi, moderasi, policy versioning, dan audit trail.
+- Better Auth dengan email/password, verifikasi email, reset password, session database, dan OTP staf.
+- Biodata bertahap, data sensitif terenkripsi, progres kelengkapan, dan verifikasi identitas.
+- Workflow pengajuan, persetujuan peserta dan wali, mediator, nazhor, khitbah, serta audit trail.
+- Dokumen privat terenkripsi di luar webroot, berikut worker antivirus dan OCR.
+- API error envelope, request logging, CORS allowlist, security headers, dan health checks.
 
-## Stack
+## Struktur Repository
 
-- Next.js 16, React 19, TypeScript
-- Neon PostgreSQL dan Drizzle ORM
-- Better Auth
-- Resend
-- Vitest
-- VPS Ubuntu, Nginx, dan systemd
+```text
+apps/
+  landing/      Landing page Next.js, port 3000
+  dashboard/    Dashboard dan halaman autentikasi Next.js, port 3001
+  api/          Express API dan document worker, port 3003
+deploy/         Unit systemd dan konfigurasi Nginx
+drizzle/        Riwayat migration PostgreSQL
+```
 
-## Menjalankan Secara Lokal
+## Prasyarat
+
+- Node.js 22 atau lebih baru
+- npm
+- PostgreSQL/Neon yang telah menjalankan migration
+- Untuk worker: ClamAV, Tesseract OCR, dan language pack Indonesia
+
+Backend dan database sebaiknya berada di region yang berdekatan. Deployment VPS Jakarta dirancang menggunakan Neon Singapore untuk menghindari latensi dan timeout lintas benua.
+
+## Instalasi
 
 ```bash
 npm install
 cp .env.example .env.local
-npm run db:migrate
-npm run dev
 ```
 
-Gunakan Node.js 22 atau versi kompatibel dengan Next.js 16. Isi seluruh variabel pada `.env.local`; jangan commit file tersebut.
+Isi variabel environment menggunakan secret development. Jangan commit `.env.local` atau kredensial produksi.
 
-## Variabel Lingkungan
+## Menjalankan Lokal
 
-| Variabel | Kegunaan |
-| --- | --- |
-| `DATABASE_URL` | Koneksi PostgreSQL Neon. |
-| `RESEND_API_KEY` | Verifikasi email, reset password, notifikasi, dan OTP staf. |
-| `BETTER_AUTH_SECRET` | Secret session produksi minimal 32 byte. |
-| `BETTER_AUTH_URL` | Origin aplikasi, misalnya `https://platformtaarufsunnah.my.id`. |
-| `PRIVATE_STORAGE_PATH` | Direktori privat di luar webroot. |
-| `DOCUMENT_ENCRYPTION_KEY` | Kunci enkripsi dokumen dan hasil OCR. |
-| `NIK_HMAC_KEY` | Kunci fingerprint NIK untuk deteksi duplikat. |
+Jalankan setiap proses di terminal terpisah:
 
-Token UploadThing tetap tersedia untuk aset yang tidak sensitif, tetapi KTP, foto verifikasi, dan foto peserta tidak boleh disimpan sebagai aset publik.
+```bash
+npm run dev:landing
+npm run dev:dashboard
+npm run dev:api
+```
+
+Alamat lokal:
+
+- Landing: `http://localhost:3000`
+- Dashboard: `http://localhost:3001`
+- API: `http://localhost:3003`
+- Health check: `http://localhost:3003/health`
+- Database readiness: `http://localhost:3003/ready`
+
+## Konfigurasi
+
+| Variabel | Digunakan oleh | Kegunaan |
+| --- | --- | --- |
+| `DATABASE_URL` | API, worker | Koneksi PostgreSQL Neon. |
+| `BETTER_AUTH_SECRET` | API | Secret session minimal 32 karakter. |
+| `API_PUBLIC_URL` | API | Origin publik API. |
+| `DASHBOARD_ORIGIN` | API | Origin dashboard yang diizinkan oleh CORS/auth. |
+| `LANDING_ORIGIN` | API | Origin landing yang dipercaya. |
+| `NEXT_PUBLIC_API_URL` | Dashboard | Alamat API dari browser. |
+| `NEXT_PUBLIC_DASHBOARD_URL` | Landing | Alamat dashboard untuk CTA dan login. |
+| `NEXT_PUBLIC_LANDING_URL` | Dashboard | Alamat landing untuk navigasi balik. |
+| `RESEND_API_KEY` | API | Email verifikasi, reset password, dan OTP. |
+| `EMAIL_FROM` | API | Identitas pengirim email terverifikasi. |
+| `PRIVATE_STORAGE_PATH` | API, worker | Direktori dokumen privat di luar webroot. |
+| `DOCUMENT_ENCRYPTION_KEY` | API, worker | Kunci enkripsi dokumen dan hasil OCR. |
+| `NIK_HMAC_KEY` | API | Kunci fingerprint NIK. |
 
 ## Perintah
 
 ```bash
-npm run dev              # development server
-npm run build            # production build dan type-check
-npm test                 # unit test
-npm run db:generate      # membuat migration Drizzle
-npm run db:migrate       # menjalankan migration
-npm run worker:documents # worker antivirus dan OCR
+npm run build             # build seluruh workspace
+npm run build:landing     # build landing saja
+npm run build:dashboard   # build dashboard saja
+npm run build:api         # bundle Express API
+npm test                  # unit test seluruh workspace
+npm run lint              # lint/type-check seluruh workspace
+npm run db:migrate --workspace=@taaruf/api
+npm run worker --workspace=@taaruf/api
 ```
 
-Worker dokumen membutuhkan `clamav`, `tesseract-ocr`, dan data bahasa Indonesia. File systemd tersedia di `deploy/` dan menjalankan worker dengan CPU/RAM limit terpisah dari web process.
+## Deployment
 
-## Prinsip Keamanan
+Landing dan dashboard merupakan dua project Vercel dengan root directory masing-masing `apps/landing` dan `apps/dashboard`.
 
-- Satu peserta hanya boleh memiliki satu proses ta’aruf aktif.
-- Consent peserta dan wali dicatat terpisah dengan versi SOP.
+API berjalan pada `127.0.0.1:3003`, dijaga systemd, dan diteruskan Nginx melalui `api.platformtaarufsunnah.my.id`. File siap pakai tersedia di `deploy/`:
+
+- `platform-taaruf-api.service`
+- `platform-taaruf-v2-worker.service`
+- `nginx-platform-taaruf-api.conf`
+
+Lakukan deployment ke port dan direktori baru terlebih dahulu. Hentikan aplikasi lama dan hapus artefaknya hanya setelah health check, auth, biodata, upload, dan smoke test production lolos.
+
+## Batas Keamanan
+
+- Satu peserta hanya dapat memiliki satu proses ta’aruf aktif.
+- Persetujuan peserta dan wali dicatat terpisah dengan versi SOP.
 - Foto dan data sensitif tidak dibuka otomatis.
-- Dokumen identitas disimpan terenkripsi, tidak memiliki URL publik, dan setiap view diaudit.
-- Admin gender hanya menangani peserta yang menjadi wilayah kerjanya; mediator hanya melihat proses yang ditugaskan.
-
-Konsep produk lengkap tersedia di [dokumen konsep](./Konsep_Platform_Taaruf_Berbasis_Syariat_Islam-Revisi_Biodata_Terbaru.md).
+- Dokumen identitas tidak memiliki URL publik dan setiap akses diaudit.
+- Cookie session hanya dikirim melalui HTTPS dan origin API dibatasi eksplisit.
+- Admin gender dan mediator hanya memperoleh data yang menjadi kewenangannya.
