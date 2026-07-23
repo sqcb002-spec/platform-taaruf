@@ -70,11 +70,11 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
   }, [definition.key, initialValues.province, initialValues.city, initialValues.district, regions.provinces]);
 
   useEffect(() => {
-    if (definition.key !== "profile") return;
+    if (definition.key === "identity") return;
     const controller = new AbortController();
-    apiFetch<Record<string, unknown>>("/api/profile/core", { signal: controller.signal }).then((data) => {
+    apiFetch<Record<string, unknown>>(definition.key === "profile" ? "/api/profile/core" : `/api/profile/sections/${definition.key}`, { signal: controller.signal }).then((data) => {
       setInitialValues(data);
-      setLocationValues({ province: String(data.province ?? ""), city: String(data.city ?? ""), district: String(data.district ?? ""), village: String(data.village ?? "") });
+      if (definition.key === "profile") setLocationValues({ province: String(data.province ?? ""), city: String(data.city ?? ""), district: String(data.district ?? ""), village: String(data.village ?? "") });
     }).catch((reason) => { if (reason?.name !== "AbortError") setMessage("Data tersimpan belum dapat dimuat."); });
     return () => controller.abort();
   }, [definition.key]);

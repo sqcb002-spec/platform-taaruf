@@ -236,6 +236,19 @@ app.get("/api/profile/sections", asyncRoute(async (req, res) => {
   res.json({ data: rows });
 }));
 
+app.get("/api/profile/sections/:section", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  const definition = profileFormSections.find((item) => item.key === req.params.section);
+  if (!definition || definition.key === "profile" || definition.key === "identity") return void res.status(404).json({ error: { code: "UNKNOWN_SECTION", message: "Bagian biodata tidak ditemukan." } });
+  const [row] = await db.select({ answers: profileSections.answers, encryptedAnswers: profileSections.encryptedAnswers }).from(profileSections).where(and(eq(profileSections.userId, session.user.id), eq(profileSections.key, definition.key))).limit(1);
+  if (!row) return res.json({ data: {} });
+  if (row.encryptedAnswers) {
+    try { return res.json({ data: decryptJson<Record<string, unknown>>(row.encryptedAnswers) }); } catch { return res.json({ data: {} }); }
+  }
+  res.json({ data: (row.answers ?? {}) as Record<string, unknown> });
+}));
+
 app.get("/api/profile/core", asyncRoute(async (req, res) => {
   const session = await requireUser(req, res);
   if (!session) return;
