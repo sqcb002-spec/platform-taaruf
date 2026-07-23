@@ -3,6 +3,7 @@ export type ProfileField = {
   label: string;
   type?: "text" | "textarea" | "number" | "date" | "select";
   options?: string[];
+  placeholder?: string;
   sensitive?: boolean;
   required?: boolean;
 };
@@ -83,27 +84,16 @@ export const profileFormSections: ProfileSectionDefinition[] = [
       "Kondisi keluarga inti dan hubungan yang berpengaruh pada pernikahan.",
     sensitive: true,
     fields: [
-      {
-        name: "father",
-        label: "Ayah: usia, pekerjaan, pendidikan, agama, status hidup",
-        type: "textarea",
-      },
-      {
-        name: "mother",
-        label: "Ibu: usia, pekerjaan, pendidikan, agama, status hidup",
-        type: "textarea",
-      },
-      {
-        name: "siblings",
-        label:
-          "Saudara kandung: hubungan, usia, pekerjaan, pendidikan, agama, status hidup",
-        type: "textarea",
-      },
-      {
-        name: "familyRelationship",
-        label: "Gambaran hubungan anggota keluarga",
-        type: "textarea",
-      },
+      { name: "fatherName", label: "Nama ayah", placeholder: "Nama lengkap ayah" },
+      { name: "fatherOccupation", label: "Pekerjaan ayah", placeholder: "Contoh: PNS" },
+      { name: "fatherReligion", label: "Agama ayah", placeholder: "Contoh: Islam", required: false },
+      { name: "motherName", label: "Nama ibu", placeholder: "Nama lengkap ibu" },
+      { name: "motherOccupation", label: "Pekerjaan ibu", placeholder: "Contoh: Ibu Rumah Tangga" },
+      { name: "motherReligion", label: "Agama ibu", placeholder: "Contoh: Islam", required: false },
+      { name: "childOrder", label: "Anak ke-", type: "number", placeholder: "Contoh: 1" },
+      { name: "siblingCount", label: "Jumlah saudara", type: "number", placeholder: "Contoh: 3" },
+      { name: "polygamyPosition", label: "Sikap terhadap poligami", type: "select", options: ["Menerima dengan syarat", "Tidak bersedia", "Perlu dibahas bersama keluarga"] },
+      { name: "parentsUnderstanding", label: "Latar belakang pemahaman / ormas kedua orang tua", type: "textarea", placeholder: "Contoh: Nahdiyin, Muhammadiyah, atau jelaskan latar belakang keluarga" },
     ],
   },
   {
