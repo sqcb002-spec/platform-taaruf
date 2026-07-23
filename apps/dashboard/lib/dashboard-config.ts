@@ -80,6 +80,7 @@ const admin: NavItem[] = [
     href: "/dashboard/moderasi",
     icon: ShieldAlert,
   },
+  { label: "Avatar Default", href: "/dashboard/konfigurasi", icon: SlidersHorizontal },
   { label: "Dukungan", href: "/dashboard/dukungan", icon: Inbox },
 ];
 const superAdmin: NavItem[] = [
