@@ -14,7 +14,7 @@ import { auth } from "@/auth";
 import { allowedOrigins, env, googleOAuthEnabled } from "@/config";
 import { db } from "@/db/index";
 import { auditLogs, documents, jobs, moderationCases, notifications, platformSettings, profileSections, profiles, taarufProcesses, users } from "@/db/schema";
-import { decryptBuffer, encryptBuffer, encryptJson } from "@/lib/crypto";
+import { decryptBuffer, decryptJson, encryptBuffer, encryptJson } from "@/lib/crypto";
 import { profileFormSections, sensitiveSectionKeys } from "@/lib/profile-form";
 import { getSession } from "@/session";
 
@@ -234,6 +234,14 @@ app.get("/api/profile/sections", asyncRoute(async (req, res) => {
   if (!session) return;
   const rows = await db.select({ key: profileSections.key, status: profileSections.status }).from(profileSections).where(eq(profileSections.userId, session.user.id));
   res.json({ data: rows });
+}));
+
+app.get("/api/profile/core", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  const [row] = await db.select({ encryptedAnswers: profileSections.encryptedAnswers }).from(profileSections).where(and(eq(profileSections.userId, session.user.id), eq(profileSections.key, "profile"))).limit(1);
+  if (!row?.encryptedAnswers) return res.json({ data: {} });
+  try { return res.json({ data: decryptJson<Record<string, unknown>>(row.encryptedAnswers) }); } catch { return res.json({ data: {} }); }
 }));
 
 const profileCoreSchema = z.object({

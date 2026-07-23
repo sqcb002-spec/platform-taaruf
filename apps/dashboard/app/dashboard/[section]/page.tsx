@@ -28,6 +28,7 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
   const definition = profileFormSections.find((item) => item.key === sectionKey) ?? profileFormSections[0];
   const [state, setState] = useState<SaveState>("idle");
   const [message, setMessage] = useState("");
+  const [initialValues, setInitialValues] = useState<Record<string, unknown>>({});
   const [regions, setRegions] = useState<{ provinces: RegionItem[]; regencies: RegionItem[]; districts: RegionItem[]; villages: RegionItem[] }>({ provinces: [], regencies: [], districts: [], villages: [] });
   const [locationValues, setLocationValues] = useState({ province: "", city: "", district: "", village: "" });
   const [regionLoading, setRegionLoading] = useState(false);
@@ -37,6 +38,44 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
     const controller = new AbortController();
     setRegionLoading(true);
     fetch(`${apiUrl}/api/public/regions/provinces/all`, { signal: controller.signal }).then((response) => response.ok ? response.json() : Promise.reject(new Error("Wilayah belum dapat dimuat."))).then((body: { data: RegionItem[] }) => setRegions((value) => ({ ...value, provinces: body.data }))).catch((reason) => { if (reason?.name !== "AbortError") setMessage("Pilihan wilayah belum dapat dimuat. Coba refresh halaman."); }).finally(() => setRegionLoading(false));
+    return () => controller.abort();
+  }, [definition.key]);
+
+  useEffect(() => {
+    if (definition.key !== "profile" || !initialValues.province || !regions.provinces.length) return;
+    let cancelled = false;
+    const loadSavedRegions = async () => {
+      try {
+        const province = regions.provinces.find((item) => item.name === String(initialValues.province));
+        if (!province) return;
+        const regenciesResponse = await fetch(`${apiUrl}/api/public/regions/regencies/${province.code}`);
+        const regencies = (await regenciesResponse.json() as { data: RegionItem[] }).data ?? [];
+        if (cancelled) return;
+        setRegions((value) => ({ ...value, regencies }));
+        const city = regencies.find((item) => item.name === String(initialValues.city));
+        if (!city) return;
+        const districtsResponse = await fetch(`${apiUrl}/api/public/regions/districts/${city.code}`);
+        const districts = (await districtsResponse.json() as { data: RegionItem[] }).data ?? [];
+        if (cancelled) return;
+        setRegions((value) => ({ ...value, districts }));
+        const district = districts.find((item) => item.name === String(initialValues.district));
+        if (!district) return;
+        const villagesResponse = await fetch(`${apiUrl}/api/public/regions/villages/${district.code}`);
+        const villages = (await villagesResponse.json() as { data: RegionItem[] }).data ?? [];
+        if (!cancelled) setRegions((value) => ({ ...value, villages }));
+      } catch { if (!cancelled) setMessage("Pilihan wilayah tersimpan belum dapat dimuat. Coba pilih ulang."); }
+    };
+    void loadSavedRegions();
+    return () => { cancelled = true; };
+  }, [definition.key, initialValues.province, initialValues.city, initialValues.district, regions.provinces]);
+
+  useEffect(() => {
+    if (definition.key !== "profile") return;
+    const controller = new AbortController();
+    apiFetch<Record<string, unknown>>("/api/profile/core", { signal: controller.signal }).then((data) => {
+      setInitialValues(data);
+      setLocationValues({ province: String(data.province ?? ""), city: String(data.city ?? ""), district: String(data.district ?? ""), village: String(data.village ?? "") });
+    }).catch((reason) => { if (reason?.name !== "AbortError") setMessage("Data tersimpan belum dapat dimuat."); });
     return () => controller.abort();
   }, [definition.key]);
 
@@ -108,9 +147,9 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
   };
   const placeholderFor = (name: string, type?: string) => placeholders[name] ?? (type === "textarea" ? "Tuliskan jawaban Anda secara ringkas…" : "Tulis jawaban Anda…");
 
-  return <form className="profile-form" onSubmit={submit}>
+  return <form key={Object.keys(initialValues).length} className="profile-form" onSubmit={submit}>
     {definition.key === "profile" ? <input type="hidden" name="gender" value={role === "participant_female" ? "Akhwat" : "Ikhwan"} /> : null}
-    <div className="profile-field-groups">{fieldGroups.map((group) => <section className="profile-field-group" key={group.title || definition.key}>{group.title ? <h3>{group.title}</h3> : null}<div className="field-grid">{group.fields.map((field) => { const id = `${definition.key}-${field.name}`; const placeholder = ("placeholder" in field ? field.placeholder : undefined) ?? placeholderFor(field.name, field.type); const regionKey = field.name === "province" ? "provinces" : field.name === "city" ? "regencies" : field.name === "district" ? "districts" : field.name === "village" ? "villages" : null; const options: RegionItem[] = regionKey ? regions[regionKey] : (field.options ?? []).map((name) => ({ code: name, name })); const disabled = field.name === "city" ? !locationValues.province : field.name === "district" ? !locationValues.city : field.name === "village" ? !locationValues.district : false; return <label key={field.name} htmlFor={id}><span>{field.label} <em>*</em></span>{field.type === "textarea" ? <textarea id={id} name={field.name} rows={4} required placeholder={placeholder} aria-describedby={`${id}-hint`} /> : field.type === "select" ? <select id={id} name={field.name} required value={regionKey ? locationValues[field.name as keyof typeof locationValues] : undefined} defaultValue={regionKey ? undefined : ""} disabled={disabled} onChange={regionKey ? (event) => { const selected = options?.find((option) => option.name === event.target.value); selectLocation(field.name as "province" | "city" | "district" | "village", event.target.value, selected?.code); } : undefined}><option value="" disabled>{regionLoading && regionKey ? "Memuat wilayah…" : disabled ? "Pilih wilayah di atas dulu" : placeholder}</option>{options?.map((option) => <option key={option.code} value={option.name}>{option.name}</option>)}</select> : <input id={id} name={field.name} type={field.type ?? "text"} min={field.name === "heightCm" ? 120 : field.name === "weightKg" ? 30 : undefined} max={field.name === "heightCm" ? 230 : field.name === "weightKg" ? 250 : undefined} required placeholder={placeholder} aria-describedby={`${id}-hint`} />}<small id={`${id}-hint`}>Wajib diisi agar tahap ini bisa disimpan.</small></label>; })}</div></section>)}</div>
+    <div className="profile-field-groups">{fieldGroups.map((group) => <section className="profile-field-group" key={group.title || definition.key}>{group.title ? <h3>{group.title}</h3> : null}<div className="field-grid">{group.fields.map((field) => { const id = `${definition.key}-${field.name}`; const placeholder = ("placeholder" in field ? field.placeholder : undefined) ?? placeholderFor(field.name, field.type); const regionKey = field.name === "province" ? "provinces" : field.name === "city" ? "regencies" : field.name === "district" ? "districts" : field.name === "village" ? "villages" : null; const options: RegionItem[] = regionKey ? regions[regionKey] : (field.options ?? []).map((name) => ({ code: name, name })); const disabled = field.name === "city" ? !locationValues.province : field.name === "district" ? !locationValues.city : field.name === "village" ? !locationValues.district : false; const rawSavedValue = String(initialValues[field.name] ?? ""); const savedValue = field.name === "birthDate" && rawSavedValue ? rawSavedValue.slice(0, 10) : rawSavedValue; return <label key={field.name} htmlFor={id}><span>{field.label} <em>*</em></span>{field.type === "textarea" ? <textarea id={id} name={field.name} rows={4} required defaultValue={savedValue} placeholder={placeholder} aria-describedby={`${id}-hint`} /> : field.type === "select" ? <select id={id} name={field.name} required value={regionKey ? locationValues[field.name as keyof typeof locationValues] : undefined} defaultValue={regionKey ? undefined : savedValue} disabled={disabled} onChange={regionKey ? (event) => { const selected = options?.find((option) => option.name === event.target.value); selectLocation(field.name as "province" | "city" | "district" | "village", event.target.value, selected?.code); } : undefined}><option value="" disabled>{regionLoading && regionKey ? "Memuat wilayah…" : disabled ? "Pilih wilayah di atas dulu" : placeholder}</option>{options?.map((option) => <option key={option.code} value={option.name}>{option.name}</option>)}</select> : <input id={id} name={field.name} type={field.type ?? "text"} min={field.name === "heightCm" ? 120 : field.name === "weightKg" ? 30 : undefined} max={field.name === "heightCm" ? 230 : field.name === "weightKg" ? 250 : undefined} required defaultValue={savedValue} placeholder={placeholder} aria-describedby={`${id}-hint`} />}<small id={`${id}-hint`}>Wajib diisi agar tahap ini bisa disimpan.</small></label>; })}</div></section>)}</div>
     <PrivacyNote />
     {message ? <p className="form-error" role="alert">{message}</p> : null}
     {state === "saved" ? <p className="form-success">Bagian tersimpan dan progres telah diperbarui.</p> : null}

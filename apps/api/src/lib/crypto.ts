@@ -47,6 +47,10 @@ export function encryptJson(value: unknown) {
   return encryptBuffer(Buffer.from(JSON.stringify(value))).toString("base64");
 }
 
+export function decryptJson<T = unknown>(value: string) {
+  return JSON.parse(decryptBuffer(Buffer.from(value, "base64")).toString("utf8")) as T;
+}
+
 export function fingerprintNik(nik: string) {
   return createHmac("sha256", keyFromEnv("NIK_HMAC_KEY"))
     .update(nik.replace(/\D/g, ""))
