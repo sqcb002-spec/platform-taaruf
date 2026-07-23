@@ -37,11 +37,8 @@ const participant: NavItem[] = [
     href: "/dashboard/biodata",
     icon: CircleUserRound,
   },
-  { label: "Pertanyaan Wajib", href: "/dashboard/pertanyaan-wajib", icon: ClipboardCheck },
-  { label: "Rekomendasi", href: "/dashboard/rekomendasi", icon: Search },
-  { label: "Pengajuan", href: "/dashboard/pengajuan", icon: HeartHandshake },
+  { label: "Jodoh", href: "/dashboard/rekomendasi", icon: Search },
   { label: "Proses Ta’aruf", href: "/dashboard/proses", icon: Activity },
-  { label: "Inbox Terarah", href: "/dashboard/inbox", icon: Inbox },
 ];
 const guardian: NavItem[] = [
   { label: "Akhwat Terhubung", href: "/dashboard/amanah", icon: Users },
@@ -88,11 +85,6 @@ const superAdmin: NavItem[] = [
   ...admin,
   { label: "Pengguna Internal", href: "/dashboard/staf", icon: Users },
   { label: "SOP & Kebijakan", href: "/dashboard/kebijakan", icon: FileCheck2 },
-  {
-    label: "Konfigurasi Sistem",
-    href: "/dashboard/konfigurasi",
-    icon: SlidersHorizontal,
-  },
   { label: "Audit Sistem", href: "/dashboard/audit", icon: ShieldAlert },
 ];
 
@@ -139,9 +131,9 @@ export const sectionCopy: Record<
     body: "Inbox bukan chat bebas. Pertanyaan, jawaban, dan arahan mediator tersusun berdasarkan tujuan pernikahan.",
   },
   "pertanyaan-wajib": {
-    eyebrow: "PERTANYAAN WAJIB",
-    title: "Jawab dengan jujur, bukan untuk mencari nilai.",
-    body: "Pertanyaan ini membantu admin dan mediator memahami pemahaman agama, kebiasaan ibadah, serta cara Anda menghadapi kehidupan rumah tangga.",
+    eyebrow: "BIODATA LANJUTAN",
+    title: "Lengkapi bekal untuk proses ta’aruf.",
+    body: "Isi satu topik dalam satu waktu. Jawaban disimpan privat dan dibuka hanya sesuai tahap serta kewenangan.",
   },
   verifikasi: {
     eyebrow: "ANTREAN AMANAH",

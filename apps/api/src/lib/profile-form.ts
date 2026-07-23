@@ -6,6 +6,7 @@ export type ProfileField = {
   placeholder?: string;
   sensitive?: boolean;
   required?: boolean;
+  visibleFor?: Array<"participant_male" | "participant_female">;
 };
 export type ProfileSectionDefinition = {
   key: string;
@@ -37,10 +38,15 @@ export const profileFormSections: ProfileSectionDefinition[] = [
     fields: [
       { name: "heightCm", label: "Tinggi badan (cm)", type: "number" },
       { name: "weightKg", label: "Berat badan (kg)", type: "number" },
+      { name: "bodyShape", label: "Bentuk fisik", type: "select", options: ["Sangat kurus", "Kurus", "Atletis", "Normal", "Berisi", "Gemuk"] },
       { name: "skinTone", label: "Warna kulit", type: "select", options: ["Putih", "Kuning langsat", "Sawo matang", "Cokelat", "Gelap"] },
       { name: "hairType", label: "Tipe rambut", type: "select", options: ["Lurus", "Bergelombang", "Ikal", "Keriting", "Botak"] },
+      { name: "hairColor", label: "Warna rambut", type: "select", options: ["Hitam", "Cokelat", "Kemerahan", "Lainnya"], required: false },
+      { name: "eyeColor", label: "Warna mata", type: "select", options: ["Hitam", "Cokelat", "Biru", "Hijau", "Lainnya"], required: false },
+      { name: "favoriteSport", label: "Olahraga yang digemari", placeholder: "Contoh: Jalan kaki, renang, atau futsal", required: false },
+      { name: "distinctiveFeatures", label: "Ciri khas", type: "textarea", placeholder: "Kosongkan jika tidak ada", required: false },
       { name: "physicalDisability", label: "Cacat fisik", type: "textarea", required: false },
-      { name: "medicalHistory", label: "Riwayat penyakit", type: "textarea", required: false },
+      { name: "medicalHistory", label: "Riwayat penyakit yang relevan", type: "textarea", required: false, sensitive: true },
     ],
   },
   {
@@ -75,6 +81,8 @@ export const profileFormSections: ProfileSectionDefinition[] = [
         type: "textarea",
         sensitive: true,
       },
+      { name: "freeTime", label: "Kegiatan waktu luang", type: "textarea", required: false },
+      { name: "substanceUse", label: "Merokok, alkohol, atau khamr", type: "select", options: ["Tidak", "Merokok", "Pernah dan sudah berhenti"], sensitive: true },
     ],
   },
   {
@@ -180,6 +188,9 @@ export const profileFormSections: ProfileSectionDefinition[] = [
         label: "Zakat, sedekah, wakaf, dan infak",
         type: "textarea",
       },
+      { name: "veilPractice", label: "Kebiasaan bercadar dan berpakaian", type: "textarea", visibleFor: ["participant_female"], required: false },
+      { name: "isbalPractice", label: "Kebiasaan terkait isbal", type: "textarea", visibleFor: ["participant_male"], required: false },
+      { name: "beardPractice", label: "Kebiasaan memelihara janggut", type: "textarea", visibleFor: ["participant_male"], required: false },
     ],
   },
   {

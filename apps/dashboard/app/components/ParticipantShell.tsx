@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronDown, LoaderCircle, LogOut, Menu, X } from "lucide-react";
+import { Activity, Bell, BookOpen, ChevronDown, CircleUserRound, HeartHandshake, Home, LoaderCircle, LogOut, Settings } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { navForRole, type NavItem } from "@/lib/dashboard-config";
 import { navigationBadge, useDashboardSummary } from "@/lib/dashboard-summary";
 import { roleLabels, type AppRole } from "@/lib/roles";
-import { apiUrl } from "@/lib/api-client";
+import { apiFetch, apiUrl } from "@/lib/api-client";
 
 type PortalUser = {
   name: string;
@@ -34,12 +34,17 @@ function MobileItem({ item, pathname }: { item: NavItem; pathname: string }) {
 export function ParticipantShell({ user, children }: { user: PortalUser; children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const nav = navForRole(user.role);
   const summary = useDashboardSummary();
-  const primaryMobile = nav.slice(0, 4);
-  const remainingMobile = nav.slice(4);
+  const [onboarding, setOnboarding] = useState<{ loaded: boolean; complete: boolean; next: string }>({ loaded: !user.role.startsWith("participant_"), complete: !user.role.startsWith("participant_"), next: "profile" });
+  const mobileNav: NavItem[] = [
+    { label: "Beranda", href: "/dashboard", icon: Home },
+    { label: "Biodata", href: "/dashboard/biodata", icon: CircleUserRound },
+    { label: "Jodoh", href: "/dashboard/rekomendasi", icon: HeartHandshake },
+    { label: "Proses", href: "/dashboard/proses", icon: Activity },
+    { label: "Akun", href: "/dashboard/pengaturan", icon: Settings },
+  ];
   const [avatarUrl, setAvatarUrl] = useState(`/avatars/${user.role === "participant_female" ? "pp_akhwat" : "pp_ikhwan"}.png`);
 
   useEffect(() => {
@@ -48,6 +53,27 @@ export function ParticipantShell({ user, children }: { user: PortalUser; childre
       if (configured) setAvatarUrl(configured);
     }).catch(() => undefined);
   }, [user.role]);
+
+  useEffect(() => {
+    if (!user.role.startsWith("participant_")) return;
+    const controller = new AbortController();
+    apiFetch<Array<{ key: string; status: string }>>("/api/profile/sections", { signal: controller.signal })
+      .then((rows) => {
+        const done = new Set(rows.filter((row) => row.status === "complete").map((row) => row.key));
+        const next = !done.has("profile") ? "profile" : !done.has("physical") ? "physical" : "family";
+        setOnboarding({ loaded: true, complete: ["profile", "physical", "family"].every((key) => done.has(key)), next });
+      })
+      .catch((reason) => {
+        if (reason?.name !== "AbortError") setOnboarding({ loaded: true, complete: false, next: "profile" });
+      });
+    return () => controller.abort();
+  }, [pathname, user.role]);
+
+  useEffect(() => {
+    if (!onboarding.loaded || onboarding.complete || !user.role.startsWith("participant_")) return;
+    const allowedDuringOnboarding = pathname.startsWith("/dashboard/biodata") || pathname.startsWith("/dashboard/panduan") || pathname.startsWith("/dashboard/pengaturan");
+    if (!allowedDuringOnboarding) router.replace(`/dashboard/biodata?bagian=${onboarding.next}`);
+  }, [onboarding, pathname, router, user.role]);
 
   async function signOut() {
     setSigningOut(true);
@@ -60,8 +86,28 @@ export function ParticipantShell({ user, children }: { user: PortalUser; childre
     }
   }
 
+  if (!onboarding.loaded) return <div className="dashboard-gate"><LoaderCircle className="spin" /><strong>Menyiapkan tahap Anda…</strong></div>;
+
+  const participantTheme = user.role === "participant_female" ? "participant-theme-female" : user.role === "participant_male" ? "participant-theme-male" : "";
+  const focusMode = user.role.startsWith("participant_") && !onboarding.complete;
+
+  if (focusMode) return (
+    <div className={`portal-shell onboarding-focus-shell ${participantTheme}`}>
+      <header className="onboarding-focus-header">
+        <Link href={`/dashboard/biodata?bagian=${onboarding.next}`} className="portal-wordmark" aria-label="Ta’aruf Sunnah">
+          <span aria-hidden="true">ت</span><strong>Ta’aruf Sunnah</strong>
+        </Link>
+        <div>
+          <Link href="/dashboard/panduan" prefetch={false}><BookOpen /> Panduan</Link>
+          <button onClick={signOut} disabled={signingOut}>{signingOut ? <LoaderCircle className="spin" /> : <LogOut />}<span>Keluar</span></button>
+        </div>
+      </header>
+      <main className="onboarding-focus-content">{children}</main>
+    </div>
+  );
+
   return (
-    <div className="portal-shell">
+    <div className={`portal-shell ${participantTheme}`}>
       {/* Hallmark N9: quiet edge alignment keeps the member portal personal, not enterprise-like. */}
       <header className="portal-header">
         <Link href="/dashboard" className="portal-wordmark" aria-label="Ta’aruf Sunnah — beranda peserta">
@@ -115,20 +161,8 @@ export function ParticipantShell({ user, children }: { user: PortalUser; childre
         <small>Ruang peserta · {user.displayCode}</small>
       </footer>
 
-      {menuOpen ? <button className="portal-sheet-backdrop" onClick={() => setMenuOpen(false)} aria-label="Tutup menu lainnya" /> : null}
-      <aside className={`portal-mobile-sheet ${menuOpen ? "is-open" : ""}`} aria-hidden={!menuOpen} inert={!menuOpen}>
-        <header><strong>Menu lainnya</strong><button onClick={() => setMenuOpen(false)} aria-label="Tutup menu"><X /></button></header>
-        <nav aria-label="Menu peserta lainnya">
-          {remainingMobile.map((item) => {
-            const Icon = item.icon;
-            return <Link key={item.href} href={item.href} prefetch={false} onClick={() => setMenuOpen(false)} className={isActive(pathname, item.href) ? "active" : ""}><Icon /><span>{item.label}</span></Link>;
-          })}
-        </nav>
-      </aside>
-
       <nav className="portal-bottom-nav" aria-label="Navigasi utama perangkat seluler">
-        {primaryMobile.map((item) => <MobileItem key={item.href} item={item} pathname={pathname} />)}
-        <button onClick={() => setMenuOpen(true)} aria-expanded={menuOpen} className={menuOpen ? "active" : ""}><Menu /><span>Menu</span></button>
+        {mobileNav.map((item) => <MobileItem key={item.href} item={item} pathname={pathname} />)}
       </nav>
     </div>
   );

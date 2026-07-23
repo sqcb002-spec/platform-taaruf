@@ -37,7 +37,9 @@ function ParticipantOverview({ summary, name, onboardingProgress }: { summary: S
   const role = summary.user.role;
   const isGuardian = role === "guardian";
   const progress = onboardingProgress;
-  const content = roleContent[role];
+  const content = !isGuardian && progress >= 100
+    ? { title: "Biodata dasar sudah selesai.", body: "Lanjutkan topik penting seperti gambaran diri, ibadah, kesiapan pernikahan, kriteria, dan referensi.", action: "Buka pusat biodata", href: "/dashboard/biodata" }
+    : roleContent[role];
   const participantSteps = [
     { title: "Data diri", detail: "Identitas dasar yang penting.", href: "/dashboard/biodata?bagian=profile", done: progress >= 34, current: progress < 34 },
     { title: "Fisik", detail: "Gambaran fisik secukupnya.", href: "/dashboard/biodata?bagian=physical", done: progress >= 67, current: progress >= 34 && progress < 67 },
@@ -59,7 +61,7 @@ function ParticipantOverview({ summary, name, onboardingProgress }: { summary: S
       <span>{isGuardian ? "Ruang ini membantu Anda menjaga amanah wali dengan keputusan yang jelas dan tercatat." : "Tidak perlu terburu-buru. Selesaikan satu tahap dengan jujur sebelum melangkah ke tahap berikutnya."}</span>
     </header>
 
-    {progress < 100 ? <section className="portal-onboarding-reminder"><span><Clock3 /></span><div><strong>Onboarding belum selesai</strong><p>Isi satu tahap dulu. Data tersimpan setiap kali Anda menekan tombol simpan.</p></div><Link href={progress < 27 ? "/dashboard/biodata?bagian=profile" : progress < 47 ? "/dashboard/biodata?bagian=physical" : "/dashboard/biodata?bagian=family"} prefetch={false}>Lanjutkan <ArrowRight /></Link></section> : null}
+    {progress < 100 ? <section className="portal-onboarding-reminder"><span><Clock3 /></span><div><strong>Lanjutkan tahap Anda</strong><p>Data tersimpan setelah Anda menekan tombol lanjutkan.</p></div><Link href={progress < 34 ? "/dashboard/biodata?bagian=profile" : progress < 67 ? "/dashboard/biodata?bagian=physical" : "/dashboard/biodata?bagian=family"} prefetch={false}>Lanjutkan <ArrowRight /></Link></section> : null}
     <div className="portal-overview-grid">
       <section className="portal-next-step">
         <div className="portal-next-copy">

@@ -1820,3 +1820,324 @@
   .portal-mobile-sheet,
   .portal-shell :is(a, button, summary) { transition: none; }
 }
+
+/* Participant experience 2026: gender-aware, mobile-first, and focused. */
+.participant-theme-male {
+  --color-paper: #f8fafc;
+  --color-paper-2: #f0f4f8;
+  --color-paper-3: #dce6ef;
+  --color-ink: #102a43;
+  --color-muted: #526a7f;
+  --color-rule: #cad7e2;
+  --color-accent: #1f527f;
+  --color-accent-deep: #16324f;
+  --color-accent-ink: #ffffff;
+  --color-cyan-soft: #e8f1f8;
+  --color-focus: #286a9f;
+}
+
+.participant-theme-female {
+  --color-paper: #fffaf9;
+  --color-paper-2: #f8f0f1;
+  --color-paper-3: #ecdde1;
+  --color-ink: #421827;
+  --color-muted: #765461;
+  --color-rule: #dfcbd1;
+  --color-accent: #95415f;
+  --color-accent-deep: #762d42;
+  --color-accent-ink: #ffffff;
+  --color-cyan-soft: #f7e9ed;
+  --color-focus: #a84969;
+}
+
+.onboarding-focus-shell {
+  min-height: 100svh;
+  padding-bottom: 0;
+  background:
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--color-accent) 9%, transparent), transparent 23rem),
+    var(--color-paper);
+}
+
+.onboarding-focus-header {
+  position: sticky;
+  z-index: 40;
+  top: 0;
+  min-height: 4.5rem;
+  padding: 0.65rem max(1rem, env(safe-area-inset-right)) 0.65rem max(1rem, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-rule) 78%, transparent);
+  background: color-mix(in srgb, var(--color-paper) 88%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.onboarding-focus-header > div {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.onboarding-focus-header > div :is(a, button) {
+  min-height: 2.75rem;
+  padding: 0 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  border-radius: 0.8rem;
+  background: transparent;
+  color: var(--color-muted);
+  font: 700 0.72rem var(--font-body);
+}
+
+.onboarding-focus-header > div svg { width: 1rem; }
+.onboarding-focus-content {
+  width: min(100%, 52rem);
+  margin-inline: auto;
+  padding: clamp(1rem, 4vw, 2.5rem) max(1rem, env(safe-area-inset-right)) calc(6.5rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  animation: participant-rise 520ms var(--ease-out) both;
+}
+
+.onboarding-focus-shell .onboarding-progress {
+  margin: 0 0 1rem;
+  gap: 0.75rem;
+}
+
+.onboarding-focus-shell .onboarding-progress-head {
+  padding: 0.4rem 0 0.6rem;
+  align-items: end;
+  border: 0;
+  background: transparent;
+}
+
+.onboarding-focus-shell .onboarding-progress-head h2 {
+  margin: 0.3rem 0 0.25rem;
+  font-size: clamp(1.65rem, 7vw, 2.7rem);
+  letter-spacing: -0.045em;
+}
+
+.onboarding-focus-shell .onboarding-progress-head p:last-child {
+  max-width: 34rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.onboarding-focus-shell .onboarding-progress-head > strong {
+  font-size: clamp(1.35rem, 5vw, 2rem);
+}
+
+.onboarding-progress-track {
+  height: 0.3rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-paper-3);
+}
+
+.onboarding-progress-track i {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 620ms var(--ease-out);
+}
+
+.onboarding-focus-shell .onboarding-steps {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.onboarding-focus-shell .onboarding-step {
+  min-height: 2.75rem;
+  padding: 0.4rem 0.55rem;
+  gap: 0.4rem;
+  border: 0;
+  border-radius: 0.85rem;
+  background: transparent;
+  font-size: 0.68rem;
+}
+
+.onboarding-focus-shell .onboarding-step > span {
+  width: 1.55rem;
+  height: 1.55rem;
+  font-size: 0.65rem;
+}
+
+.onboarding-focus-shell .onboarding-step.current { background: var(--color-cyan-soft); }
+.onboarding-focus-shell .biodata-layout > .form-card {
+  padding: clamp(1rem, 4vw, 1.6rem);
+  border: 1px solid var(--color-rule);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--color-paper) 94%, white);
+  box-shadow: 0 1.2rem 3rem color-mix(in srgb, var(--color-ink) 7%, transparent);
+}
+
+.onboarding-focus-shell .biodata-layout > .form-card > header { display: none; }
+.onboarding-focus-shell .profile-field-groups { gap: 1.5rem; }
+.onboarding-focus-shell .profile-field-group { padding-top: 0; border-top: 0; }
+.onboarding-focus-shell .profile-field-group + .profile-field-group {
+  padding-top: 1.35rem;
+  border-top: 1px solid var(--color-rule);
+}
+
+.onboarding-focus-shell .profile-field-group h3 {
+  margin-bottom: 0.8rem;
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  letter-spacing: -0.015em;
+}
+
+.onboarding-focus-shell .profile-form footer {
+  position: fixed;
+  z-index: 35;
+  inset: auto 0 0;
+  margin: 0;
+  padding: 0.75rem max(1rem, calc((100vw - 50rem) / 2)) max(0.75rem, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+  gap: 0.6rem;
+  border-top: 1px solid var(--color-rule);
+  background: color-mix(in srgb, var(--color-paper) 94%, transparent);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 -0.8rem 2rem color-mix(in srgb, var(--color-ink) 7%, transparent);
+}
+
+.onboarding-focus-shell .profile-form footer :is(a, button) {
+  min-height: 3.1rem;
+  justify-content: center;
+  border-radius: 0.9rem;
+}
+
+.form-attestation {
+  padding: 0.85rem;
+  display: flex !important;
+  grid-column: 1 / -1;
+  align-items: flex-start;
+  gap: 0.7rem !important;
+  border: 1px solid var(--color-rule);
+  border-radius: 0.9rem;
+  background: var(--color-paper-2);
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.form-attestation input {
+  width: 1.05rem !important;
+  height: 1.05rem;
+  margin-top: 0.1rem;
+  padding: 0 !important;
+  flex: 0 0 auto;
+  accent-color: var(--color-accent);
+}
+
+.biodata-hub { animation: participant-rise 520ms var(--ease-out) both; }
+.biodata-hub > header {
+  display: grid;
+  gap: 1.25rem;
+  padding-bottom: clamp(1.5rem, 4vw, 2.5rem);
+  border-bottom: 1px solid var(--color-rule);
+}
+.biodata-hub > header h1 {
+  max-width: 18ch;
+  margin: 0.35rem 0 0.65rem;
+  font-size: clamp(2rem, 6vw, 4.4rem);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+.biodata-hub > header p:last-child { max-width: 43rem; color: var(--color-muted); line-height: 1.65; }
+.hub-progress { align-self: end; display: grid; gap: 0.25rem; }
+.hub-progress strong { font-size: clamp(2rem, 5vw, 3.4rem); letter-spacing: -0.055em; }
+.hub-progress span { color: var(--color-muted); font-size: 0.7rem; }
+.hub-progress i { width: min(100%, 13rem); height: 0.3rem; margin-top: 0.45rem; overflow: hidden; border-radius: var(--radius-pill); background: var(--color-paper-3); }
+.hub-progress b { height: 100%; display: block; border-radius: inherit; background: var(--color-accent); transition: width 620ms var(--ease-out); }
+.biodata-hub-grid { margin-top: 1rem; display: grid; gap: 0.65rem; }
+.biodata-hub-grid > a {
+  min-width: 0;
+  min-height: 6rem;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: 2.35rem minmax(0, 1fr) 2.5rem;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid var(--color-rule);
+  border-radius: 1.1rem;
+  background: var(--color-paper);
+  transition: transform var(--dur-med) var(--ease-out), border-color var(--dur-short) var(--ease-out), box-shadow var(--dur-med) var(--ease-out), background-color var(--dur-short) var(--ease-out);
+}
+.biodata-hub-grid > a > span {
+  width: 2.2rem;
+  height: 2.2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-paper-2);
+  color: var(--color-muted);
+  font: 700 0.62rem var(--font-label);
+}
+.biodata-hub-grid > a.complete > span { background: var(--color-accent); color: var(--color-accent-ink); }
+.biodata-hub-grid > a > span svg,
+.biodata-hub-grid > a > svg { width: 1rem; }
+.biodata-hub-grid > a > svg { justify-self: end; color: var(--color-muted); }
+.biodata-hub-grid strong { display: block; font-size: 0.9rem; }
+.biodata-hub-grid p { margin: 0.25rem 0 0.45rem; color: var(--color-muted); font-size: 0.73rem; line-height: 1.5; }
+.biodata-hub-grid small { color: var(--color-accent-deep); font-size: 0.65rem; font-weight: 800; }
+.biodata-hub-actions { margin-top: 1rem; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.65rem; }
+.biodata-hub-actions :is(a) { min-height: 3rem; }
+
+.portal-bottom-nav {
+  box-shadow: 0 -0.75rem 2rem color-mix(in srgb, var(--color-ink) 6%, transparent);
+}
+
+.portal-bottom-nav a:nth-child(3) svg {
+  width: 2.55rem;
+  height: 2.55rem;
+  margin-top: -1.35rem;
+  padding: 0.7rem;
+  border-radius: 50%;
+  background: var(--color-accent-deep);
+  color: var(--color-accent-ink);
+  box-shadow: 0 0.65rem 1.4rem color-mix(in srgb, var(--color-accent-deep) 24%, transparent);
+}
+
+.portal-next-step,
+.portal-guidance,
+.portal-journey li,
+.question-topics button,
+.settings-card {
+  transition: transform var(--dur-med) var(--ease-out), border-color var(--dur-short) var(--ease-out), box-shadow var(--dur-med) var(--ease-out), background-color var(--dur-short) var(--ease-out);
+}
+
+@keyframes participant-rise {
+  from { opacity: 0; transform: translateY(0.8rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .onboarding-focus-header > div :is(a, button):hover { background: var(--color-paper-2); color: var(--color-ink); }
+  .portal-next-step:hover,
+  .portal-guidance:hover,
+  .settings-card:hover { transform: translateY(-3px); box-shadow: 0 1rem 2.5rem color-mix(in srgb, var(--color-ink) 8%, transparent); }
+  .question-topics button:hover { transform: translateY(-2px); box-shadow: 0 0.65rem 1.5rem color-mix(in srgb, var(--color-ink) 7%, transparent); }
+  .biodata-hub-grid > a:hover { transform: translateY(-2px); border-color: var(--color-accent); box-shadow: 0 0.75rem 1.8rem color-mix(in srgb, var(--color-ink) 7%, transparent); background: var(--color-paper-2); }
+}
+
+@media (max-width: 34rem) {
+  .onboarding-focus-header .portal-wordmark strong { display: none; }
+  .onboarding-focus-header > div :is(a, button) span { display: none; }
+  .onboarding-focus-shell .onboarding-progress-head > strong small { display: none; }
+  .onboarding-focus-shell .onboarding-step { justify-content: center; }
+  .onboarding-focus-shell .onboarding-step strong { display: none; }
+}
+
+@media (min-width: 60rem) {
+  .onboarding-focus-content { padding-top: 3rem; }
+  .biodata-hub > header { grid-template-columns: minmax(0, 1fr) 14rem; align-items: end; }
+  .biodata-hub-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-focus-content { animation: none; }
+  .onboarding-progress-track i { transition: none; }
+}
