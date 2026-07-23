@@ -14,7 +14,7 @@ import { DocumentUpload } from "@/app/components/DocumentUpload";
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 function PrivacyNote() {
-  return <div className="sensitive-note"><ShieldCheck /><div><strong>Visibilitas data dijaga bertahap</strong><p>Kontak, dokumen identitas, dan jawaban sensitif tidak ditampilkan otomatis kepada kandidat.</p></div></div>;
+  return <div className="sensitive-note"><ShieldCheck /><div><strong>Visibilitas data dijaga bertahap</strong><p>Nama lengkap, kontak, dokumen identitas, dan jawaban sensitif hanya dipakai sesuai kewenangan dan tidak ditampilkan otomatis kepada kandidat.</p></div></div>;
 }
 
 function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: AppRole; onSaved: () => void }) {
@@ -40,7 +40,7 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
   if (definition.key === "identity") return <div className="profile-form"><div className="upload-grid"><DocumentUpload kind="identity_card" label="Foto KTP bagian depan" /><DocumentUpload kind="identity_selfie" label="Foto verifikasi diri bersama KTP" /><DocumentUpload kind="profile_photo" label="Foto peserta untuk verifikasi" /></div><PrivacyNote /></div>;
 
   const coreFields = [
-    { name: "username", label: "Username" },
+    { name: "fullName", label: "Nama lengkap sesuai KTP" },
     { name: "birthDate", label: "Tanggal lahir", type: "date" },
     { name: "maritalStatus", label: "Status pernikahan" },
     { name: "province", label: "Provinsi" },

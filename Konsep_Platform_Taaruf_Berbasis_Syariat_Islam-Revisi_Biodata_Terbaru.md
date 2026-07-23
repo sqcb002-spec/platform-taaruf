@@ -404,7 +404,7 @@ Daftar berikut merupakan baseline field terbaru dari arahan atasan. Penentuan fi
 
 #### A. Biodata Utama
 
-• Username
+• Nama lengkap sesuai KTP, disimpan privat untuk verifikasi identitas dan tidak ditampilkan otomatis kepada kandidat
 
 • Jenis Kelamin
 
@@ -672,9 +672,9 @@ Setelah biodata diisi, sistem membentuk halaman profil peserta sebagai ringkasan
 
 Ringkasan profil mengambil data terpilih dari spesifikasi biodata di atas. Data sensitif tidak ditampilkan otomatis dan mengikuti pengaturan hak akses serta tahap proses ta'aruf.
 
-* Nama atau kode peserta.
+* Kode peserta atau nama panggilan sesuai tahap keterbukaan data.
 
-* Username.
+* Nama lengkap sesuai KTP hanya untuk admin verifikator dan tidak ditampilkan kepada kandidat tanpa dasar akses yang sah.
 
 * Nomor telepon, tetapi hanya untuk admin dan tidak ditampilkan kepada kandidat tanpa izin.
 

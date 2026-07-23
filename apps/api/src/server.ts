@@ -166,7 +166,7 @@ app.get("/api/profile/sections", asyncRoute(async (req, res) => {
 }));
 
 const profileCoreSchema = z.object({
-  username: z.string().trim().min(3).max(40), gender: z.enum(["Ikhwan", "Akhwat"]), birthDate: z.coerce.date(), maritalStatus: z.string().min(1).max(60), province: z.string().trim().min(2).max(80), city: z.string().trim().min(2).max(80), manhaj: z.string().trim().min(2).max(120), ethnicity: z.string().trim().min(2).max(80), heightCm: z.coerce.number().int().min(120).max(230), weightKg: z.coerce.number().int().min(30).max(250), occupation: z.string().trim().min(3).max(500),
+  fullName: z.string().trim().min(3).max(120), gender: z.enum(["Ikhwan", "Akhwat"]), birthDate: z.coerce.date(), maritalStatus: z.string().min(1).max(60), province: z.string().trim().min(2).max(80), city: z.string().trim().min(2).max(80), manhaj: z.string().trim().min(2).max(120), ethnicity: z.string().trim().min(2).max(80), heightCm: z.coerce.number().int().min(120).max(230), weightKg: z.coerce.number().int().min(30).max(250), occupation: z.string().trim().min(3).max(500),
 });
 
 app.put("/api/profile/core", asyncRoute(async (req, res) => {
@@ -177,7 +177,8 @@ app.put("/api/profile/core", asyncRoute(async (req, res) => {
   if (!parsed.success) return void res.status(400).json({ error: { code: "INVALID_PROFILE", message: "Semua field wajib diisi dengan format yang benar." } });
   const value = parsed.data;
   await db.insert(profiles).values({ userId: session.user.id, birthDate: value.birthDate, province: value.province, city: value.city, ethnicity: value.ethnicity, maritalStatus: value.maritalStatus, manhaj: value.manhaj, heightCm: value.heightCm, weightKg: value.weightKg, occupationField: value.occupation, completionPercent: 6 }).onConflictDoUpdate({ target: profiles.userId, set: { birthDate: value.birthDate, province: value.province, city: value.city, ethnicity: value.ethnicity, maritalStatus: value.maritalStatus, manhaj: value.manhaj, heightCm: value.heightCm, weightKg: value.weightKg, occupationField: value.occupation, completionPercent: 6, updatedAt: new Date() } });
-  await db.insert(profileSections).values({ userId: session.user.id, key: "profile", status: "complete", answers: { username: value.username, gender: value.gender } }).onConflictDoUpdate({ target: [profileSections.userId, profileSections.key], set: { status: "complete", answers: { username: value.username, gender: value.gender }, updatedAt: new Date() } });
+  const protectedIdentity = encryptJson({ fullName: value.fullName });
+  await db.insert(profileSections).values({ userId: session.user.id, key: "profile", status: "complete", answers: { fullNameProtected: true, gender: value.gender }, encryptedAnswers: protectedIdentity }).onConflictDoUpdate({ target: [profileSections.userId, profileSections.key], set: { status: "complete", answers: { fullNameProtected: true, gender: value.gender }, encryptedAnswers: protectedIdentity, updatedAt: new Date() } });
   await db.insert(auditLogs).values({ actorId: session.user.id, action: "profile.section.saved", targetType: "profile_section", targetId: "profile", metadata: { section: "profile" } });
   res.json({ data: { ok: true } });
 }));
