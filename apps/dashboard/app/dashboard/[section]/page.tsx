@@ -58,10 +58,28 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
     { name: "occupation", label: "Tempat dan bidang pekerjaan", type: "textarea" },
   ];
   const fields = definition.key === "profile" ? coreFields : definition.fields;
+  const placeholders: Record<string, string> = {
+    fullName: "Contoh: Ahmad Fauzan",
+    birthDate: "Pilih tanggal lahir",
+    maritalStatus: "Contoh: Belum menikah",
+    province: "Contoh: Jawa Barat",
+    city: "Contoh: Kota Bandung",
+    manhaj: "Contoh: Ahlus Sunnah wal Jamaah",
+    ethnicity: "Contoh: Sunda",
+    heightCm: "Contoh: 170",
+    weightKg: "Contoh: 65",
+    occupation: "Contoh: Pengembang perangkat lunak di bidang teknologi",
+    skinTone: "Contoh: Sawo matang",
+    appearance: "Ceritakan gambaran fisik secara singkat dan wajar…",
+    veil: "Contoh: Tidak bercadar / bercadar saat tertentu",
+    isbal: "Contoh: Menjaga pakaian di atas mata kaki",
+    beard: "Contoh: Memelihara janggut",
+  };
+  const placeholderFor = (name: string, type?: string) => placeholders[name] ?? (type === "textarea" ? "Tuliskan jawaban Anda secara ringkas…" : "Tulis jawaban Anda…");
 
   return <form className="profile-form" onSubmit={submit}>
     {definition.key === "profile" ? <input type="hidden" name="gender" value={role === "participant_female" ? "Akhwat" : "Ikhwan"} /> : null}
-    <div className="field-grid">{fields.map((field) => <label key={field.name}>{field.label}{field.type === "textarea" ? <textarea name={field.name} rows={4} required /> : <input name={field.name} type={field.type ?? "text"} min={field.name === "heightCm" ? 120 : field.name === "weightKg" ? 30 : undefined} max={field.name === "heightCm" ? 230 : field.name === "weightKg" ? 250 : undefined} required />}</label>)}</div>
+    <div className="field-grid">{fields.map((field) => { const id = `${definition.key}-${field.name}`; const placeholder = placeholderFor(field.name, field.type); return <label key={field.name} htmlFor={id}><span>{field.label} <em>*</em></span>{field.type === "textarea" ? <textarea id={id} name={field.name} rows={4} required placeholder={placeholder} aria-describedby={`${id}-hint`} /> : <input id={id} name={field.name} type={field.type ?? "text"} min={field.name === "heightCm" ? 120 : field.name === "weightKg" ? 30 : undefined} max={field.name === "heightCm" ? 230 : field.name === "weightKg" ? 250 : undefined} required placeholder={placeholder} aria-describedby={`${id}-hint`} />}<small id={`${id}-hint`}>Wajib diisi agar tahap ini bisa disimpan.</small></label>; })}</div>
     <PrivacyNote />
     {message ? <p className="form-error" role="alert">{message}</p> : null}
     {state === "saved" ? <p className="form-success">Bagian tersimpan dan progres telah diperbarui.</p> : null}

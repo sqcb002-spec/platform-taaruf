@@ -36,6 +36,7 @@ export function DocumentUpload({
       <input
         type="file"
         accept="image/jpeg,image/png"
+        aria-label={`${label}. Pilih file JPEG atau PNG maksimal 5 MB`}
         onChange={upload}
         disabled={state === "uploading"}
       />

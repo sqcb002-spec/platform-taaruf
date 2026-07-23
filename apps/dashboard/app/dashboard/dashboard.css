@@ -612,6 +612,13 @@
   font-size: 0.75rem;
   font-weight: 750;
 }
+.profile-form label > span { display: block; }
+.profile-form label > span em { color: var(--color-coral-ink); font-style: normal; }
+.profile-form label > small { color: var(--color-muted); font-size: .66rem; font-weight: 500; line-height: 1.35; }
+.profile-form input::placeholder,
+.profile-form textarea::placeholder,
+.question-list input::placeholder,
+.question-list textarea::placeholder { color: color-mix(in srgb, var(--color-muted) 76%, transparent); opacity: 1; }
 .field-grid {
   display: grid;
   gap: 1rem;
