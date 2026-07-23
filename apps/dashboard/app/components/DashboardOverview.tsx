@@ -19,6 +19,7 @@ const roleContent = {
 } as const;
 
 type Summary = DashboardSummary;
+const onboardingKeys = ["profile", "education", "self", "experience", "physical", "lifestyle", "emotion", "family", "marriage", "future", "criteria_physical", "criteria_nonphysical", "life_story", "references"];
 
 const activityLabels: Record<string, string> = {
   "super_admin.seeded": "Super admin dibuat",
@@ -32,16 +33,16 @@ function PortalLoading() {
   return <section className="portal-overview portal-overview-loading" aria-label="Memuat ringkasan"><div className="skeleton portal-skeleton-kicker" /><div className="skeleton portal-skeleton-title" /><div className="portal-skeleton-layout"><div className="skeleton portal-skeleton-main" /><div className="skeleton portal-skeleton-aside" /></div><p aria-live="polite"><LoaderCircle className="spin" /> Menyiapkan perjalanan Anda…</p></section>;
 }
 
-function ParticipantOverview({ summary, name }: { summary: Summary; name: string }) {
+function ParticipantOverview({ summary, name, onboardingProgress }: { summary: Summary; name: string; onboardingProgress: number }) {
   const role = summary.user.role;
   const isGuardian = role === "guardian";
-  const progress = summary.completionPercent;
+  const progress = onboardingProgress;
   const content = roleContent[role];
   const participantSteps = [
-    { title: "Lengkapi biodata", detail: "Cerita diri, kesiapan, dan kriteria pasangan.", href: "/dashboard/biodata", done: progress >= 100, current: progress < 100 },
-    { title: "Verifikasi data", detail: "Identitas diperiksa oleh petugas sesuai kewenangan.", href: "/dashboard/biodata", done: false, current: progress >= 100 },
-    { title: "Terima rekomendasi", detail: "Profil terbatas dibuka setelah syarat awal terpenuhi.", href: "/dashboard/rekomendasi", done: false, current: false },
-    { title: "Jalani ta’aruf", detail: "Satu proses aktif dengan wali dan mediator.", href: "/dashboard/proses", done: false, current: false },
+    { title: "Data diri", detail: "Identitas dan gambaran diri yang penting.", href: "/dashboard/biodata?bagian=profile", done: progress >= 27, current: progress < 27 },
+    { title: "Fisik", detail: "Gambaran fisik dan pola hidup.", href: "/dashboard/biodata?bagian=physical", done: progress >= 47, current: progress >= 27 && progress < 47 },
+    { title: "Keluarga", detail: "Keluarga dan kesiapan pernikahan.", href: "/dashboard/biodata?bagian=family", done: progress >= 100, current: progress >= 47 && progress < 100 },
+    { title: "Pertanyaan lanjutan", detail: "Pemahaman agama dan respons dalam rumah tangga.", href: "/dashboard/pertanyaan-wajib", done: false, current: progress >= 100 },
   ];
   const guardianSteps = [
     { title: "Akhwat terhubung", detail: "Pastikan hubungan wali tercatat dan terverifikasi.", href: "/dashboard/amanah", done: false, current: true },
@@ -58,6 +59,7 @@ function ParticipantOverview({ summary, name }: { summary: Summary; name: string
       <span>{isGuardian ? "Ruang ini membantu Anda menjaga amanah wali dengan keputusan yang jelas dan tercatat." : "Tidak perlu terburu-buru. Selesaikan satu tahap dengan jujur sebelum melangkah ke tahap berikutnya."}</span>
     </header>
 
+    {progress < 100 ? <section className="portal-onboarding-reminder"><span><Clock3 /></span><div><strong>Onboarding belum selesai</strong><p>Isi satu tahap dulu. Data tersimpan setiap kali Anda menekan tombol simpan.</p></div><Link href={progress < 27 ? "/dashboard/biodata?bagian=profile" : progress < 47 ? "/dashboard/biodata?bagian=physical" : "/dashboard/biodata?bagian=family"} prefetch={false}>Lanjutkan <ArrowRight /></Link></section> : null}
     <div className="portal-overview-grid">
       <section className="portal-next-step">
         <div className="portal-next-copy">
@@ -95,6 +97,7 @@ export function DashboardOverview() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const [onboardingProgress, setOnboardingProgress] = useState<number | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -105,6 +108,17 @@ export function DashboardOverview() {
     return () => controller.abort();
   }, [attempt]);
 
+  useEffect(() => {
+    const role = (authSession?.user as ({ role?: AppRole } | undefined))?.role;
+    if (!role?.startsWith("participant_")) return;
+    const controller = new AbortController();
+    apiFetch<Array<{ key: string; status: string }>>("/api/profile/sections", { signal: controller.signal }).then((rows) => {
+      const complete = new Set(rows.filter((row) => row.status === "complete").map((row) => row.key));
+      setOnboardingProgress(Math.round((onboardingKeys.filter((key) => complete.has(key)).length / onboardingKeys.length) * 100));
+    }).catch((reason) => { if (reason?.name !== "AbortError") setOnboardingProgress(0); });
+    return () => controller.abort();
+  }, [authSession?.user]);
+
   if (!summary && !error) return authSession?.user && ((authSession.user as typeof authSession.user & { role?: AppRole }).role?.startsWith("participant_") || (authSession.user as typeof authSession.user & { role?: AppRole }).role === "guardian") ? <PortalLoading /> : <section className="dashboard-loading"><div className="skeleton skeleton-title" /><div className="skeleton skeleton-panel" /><div className="metric-grid">{[1,2,3].map((item) => <div className="skeleton skeleton-metric" key={item} />)}</div><p><LoaderCircle className="spin" /> Mengambil ringkasan terbaru…</p></section>;
   if (!summary) return <section className="dashboard-error"><ShieldCheck /><h1>Ringkasan belum dapat dimuat.</h1><p>{error}</p><button className="app-primary" onClick={() => setAttempt((value) => value + 1)}><RefreshCw /> Coba lagi</button></section>;
 
@@ -112,7 +126,7 @@ export function DashboardOverview() {
   const content = roleContent[role];
   const isParticipant = role.startsWith("participant_");
   const name = summary.user.name || authSession?.user.name || "Sahabat";
-  if (isParticipant || role === "guardian") return <ParticipantOverview summary={summary} name={name} />;
+  if (isParticipant || role === "guardian") return <ParticipantOverview summary={summary} name={name} onboardingProgress={isParticipant ? onboardingProgress ?? 0 : summary.completionPercent} />;
   return <>
     <section className="dashboard-welcome"><div><p className="mono">{roleLabels[role].toUpperCase()} · {summary.user.displayCode}</p><h1>Assalamu’alaikum, {name}.</h1><p>Berikut keadaan proses dan amanah yang perlu Anda perhatikan hari ini.</p></div><div className="today"><CalendarDays /><span>Hari ini</span><strong>{new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date())}</strong></div></section>
     <section className="focus-panel"><div className="focus-copy"><span className="status-chip"><Clock3 /> Tindakan berikutnya</span><h2>{content.title}</h2><p>{content.body}</p><Link href={content.href} className="app-primary" prefetch={false}>{content.action} <ArrowUpRight /></Link></div><div className="progress-orbit queue-count"><div><strong>{summary.stats.verificationQueue}</strong><span>Dalam antrean</span></div></div></section>

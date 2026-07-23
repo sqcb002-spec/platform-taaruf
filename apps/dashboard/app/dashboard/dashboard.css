@@ -1605,6 +1605,15 @@
 .portal-mobile-sheet nav svg { width: 1.1rem; }
 
 .portal-overview-loading { display: grid; gap: 0.8rem; }
+.portal-onboarding-reminder { display: flex; align-items: center; gap: .85rem; margin-bottom: 1rem; padding: .9rem 1rem; border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-rule)); border-radius: var(--radius-card); background: var(--color-cyan-soft); }
+.portal-onboarding-reminder > span { display: grid; place-items: center; flex: 0 0 auto; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--color-paper); color: var(--color-accent-deep); }
+.portal-onboarding-reminder > span svg { width: 1rem; }
+.portal-onboarding-reminder strong, .portal-onboarding-reminder p { display: block; }
+.portal-onboarding-reminder p { margin: .2rem 0 0; color: var(--color-muted); font-size: .74rem; }
+.portal-onboarding-reminder a { display: inline-flex; align-items: center; gap: .3rem; margin-left: auto; color: var(--color-accent-deep); font-size: .76rem; font-weight: 800; white-space: nowrap; }
+.portal-onboarding-reminder a svg { width: .9rem; transition: transform var(--dur-short) var(--ease-out); }
+.portal-onboarding-reminder a:hover svg { transform: translateX(3px); }
+@media (max-width: 40rem) { .portal-onboarding-reminder { align-items: flex-start; flex-wrap: wrap; } .portal-onboarding-reminder a { margin-left: 3.05rem; } }
 .required-questions-layout { display: grid; gap: 1rem; }
 .required-questions-intro { display: flex; justify-content: space-between; gap: 1rem; padding: clamp(1.2rem, 3vw, 2rem); border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: linear-gradient(135deg, var(--color-paper-2), var(--color-paper)); }
 .required-questions-intro h2 { margin: .25rem 0 .45rem; font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 2rem); }
@@ -1638,6 +1647,7 @@
 .onboarding-step:hover { transform: translateY(-2px); border-color: var(--color-accent); }
 .onboarding-step > span { display: grid; place-items: center; flex: 0 0 auto; width: 2rem; height: 2rem; border-radius: 50%; background: var(--color-paper-2); color: var(--color-muted); font-weight: 800; }
 .onboarding-step.current { border-color: var(--color-accent); background: var(--color-cyan-soft); }
+.onboarding-step.locked { opacity: .52; cursor: not-allowed; }
 .onboarding-step.current > span, .onboarding-step.complete > span { background: var(--color-accent); color: white; }
 .onboarding-step strong, .onboarding-step small { display: block; }
 .onboarding-step small { margin-top: .25rem; color: var(--color-muted); font-size: .68rem; line-height: 1.35; }

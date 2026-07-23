@@ -16,7 +16,7 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 const onboardingGroups = [
   { key: "data-diri", label: "Data diri", description: "Identitas, pendidikan, gambaran diri, dan pengalaman.", sections: ["profile", "education", "self", "experience"] },
   { key: "fisik", label: "Fisik", description: "Gambaran fisik dan pola hidup yang relevan.", sections: ["physical", "lifestyle", "emotion"] },
-  { key: "keluarga", label: "Keluarga", description: "Keluarga, visi pernikahan, dan referensi.", sections: ["family", "marriage", "future", "criteria_physical", "criteria_nonphysical", "partner_questions", "life_story", "references"] },
+  { key: "keluarga", label: "Keluarga", description: "Keluarga, visi pernikahan, dan referensi.", sections: ["family", "marriage", "future", "criteria_physical", "criteria_nonphysical", "life_story", "references"] },
 ];
 
 function PrivacyNote() {
@@ -72,7 +72,7 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
 function OnboardingProgress({ activeGroup, completed, percent, selectedKey }: { activeGroup: typeof onboardingGroups[number]; completed: Set<string>; percent: number; selectedKey: string }) {
   return <div className="onboarding-progress">
     <div className="onboarding-progress-head"><div><p className="mono">BIODATA DIRI</p><h2>Lengkapi data Anda dengan tenang.</h2><p>Tiga tahap singkat. Anda dapat menyimpan dan melanjutkan kapan saja.</p></div><strong>{percent}%<small>progres</small></strong></div>
-    <div className="onboarding-steps">{onboardingGroups.map((group, index) => { const done = group.sections.every((key) => completed.has(key)); const current = group.key === activeGroup.key; return <Link key={group.key} href={`/dashboard/biodata?bagian=${group.sections[0]}`} prefetch={false} className={`onboarding-step ${current ? "current" : ""} ${done ? "complete" : ""}`}><span>{done ? <Check /> : index + 1}</span><div><strong>{group.label}</strong><small>{done ? "Selesai" : current ? "Sedang diisi" : group.description}</small></div></Link>; })}</div>
+    <div className="onboarding-steps">{onboardingGroups.map((group, index) => { const done = group.sections.every((key) => completed.has(key)); const unlocked = index === 0 || onboardingGroups[index - 1].sections.every((key) => completed.has(key)); const current = group.key === activeGroup.key; return <Link key={group.key} href={unlocked ? `/dashboard/biodata?bagian=${group.sections[0]}` : `/dashboard/biodata?bagian=${activeGroup.sections[0]}`} prefetch={false} onClick={(event) => { if (!unlocked) event.preventDefault(); }} aria-disabled={!unlocked} className={`onboarding-step ${current ? "current" : ""} ${done ? "complete" : ""} ${!unlocked ? "locked" : ""}`}><span>{done ? <Check /> : index + 1}</span><div><strong>{group.label}</strong><small>{done ? "Selesai" : current ? "Sedang diisi" : unlocked ? "Siap dimulai" : "Selesaikan tahap sebelumnya"}</small></div></Link>; })}</div>
     <div className="onboarding-subnav"><span>Bagian tahap ini</span>{activeGroup.sections.map((key, index) => { const item = profileFormSections.find((entry) => entry.key === key); return <Link key={key} href={`/dashboard/biodata?bagian=${key}`} prefetch={false} className={item?.key === selectedKey ? "active" : ""}>{index + 1}. {item?.label ?? key}</Link>; })}</div>
     <div className="onboarding-note"><ShieldCheck /><span>Foto KTP dan selfie tidak termasuk onboarding biodata. Verifikasi identitas dilakukan privat setelah data awal selesai.</span></div>
   </div>;
