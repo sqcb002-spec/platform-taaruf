@@ -65,6 +65,17 @@ app.get("/api/public/avatar-config", asyncRoute(async (_req, res) => {
   } });
 }));
 
+app.get("/api/public/regions/:level/:code", asyncRoute(async (req, res) => {
+  const level = z.enum(["provinces", "regencies", "districts", "villages"]).safeParse(req.params.level);
+  if (!level.success) return void res.status(400).json({ error: { code: "INVALID_REGION_LEVEL", message: "Tingkat wilayah tidak valid." } });
+  const code = String(req.params.code ?? "");
+  if (level.data !== "provinces" && !/^\d+(\.\d+){1,3}$/.test(code)) return void res.status(400).json({ error: { code: "INVALID_REGION_CODE", message: "Kode wilayah tidak valid." } });
+  const upstream = await fetch(level.data === "provinces" ? "https://wilayah.id/api/provinces.json" : `https://wilayah.id/api/${level.data}/${encodeURIComponent(code)}.json`);
+  if (!upstream.ok) return void res.status(502).json({ error: { code: "REGION_UPSTREAM_ERROR", message: "Data wilayah belum dapat dimuat." } });
+  const body = await upstream.json();
+  res.set("cache-control", "public, max-age=86400, stale-while-revalidate=604800").json({ data: body.data ?? [] });
+}));
+
 app.get("/health", (_req, res) => res.json({ ok: true, service: "taaruf-api", time: new Date().toISOString() }));
 app.get("/ready", asyncRoute(async (_req, res) => {
   await db.select({ id: users.id }).from(users).limit(1);

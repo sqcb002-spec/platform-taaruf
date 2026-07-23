@@ -36,14 +36,14 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
     if (definition.key !== "profile") return;
     const controller = new AbortController();
     setRegionLoading(true);
-    fetch("https://wilayah.id/api/provinces.json", { signal: controller.signal }).then((response) => response.ok ? response.json() : Promise.reject(new Error("Wilayah belum dapat dimuat."))).then((body: { data: RegionItem[] }) => setRegions((value) => ({ ...value, provinces: body.data }))).catch((reason) => { if (reason?.name !== "AbortError") setMessage("Pilihan wilayah belum dapat dimuat. Coba refresh halaman."); }).finally(() => setRegionLoading(false));
+    fetch(`${apiUrl}/api/public/regions/provinces/all`, { signal: controller.signal }).then((response) => response.ok ? response.json() : Promise.reject(new Error("Wilayah belum dapat dimuat."))).then((body: { data: RegionItem[] }) => setRegions((value) => ({ ...value, provinces: body.data }))).catch((reason) => { if (reason?.name !== "AbortError") setMessage("Pilihan wilayah belum dapat dimuat. Coba refresh halaman."); }).finally(() => setRegionLoading(false));
     return () => controller.abort();
   }, [definition.key]);
 
   async function loadRegion(level: "regencies" | "districts" | "villages", code: string) {
     if (!code) return;
     setRegionLoading(true);
-    try { const response = await fetch(`https://wilayah.id/api/${level}/${code}.json`); if (!response.ok) throw new Error("Wilayah belum dapat dimuat."); const body = await response.json() as { data: RegionItem[] }; setRegions((value) => ({ ...value, [level]: body.data, ...(level === "regencies" ? { districts: [], villages: [] } : level === "districts" ? { villages: [] } : {}) })); } catch { setMessage("Pilihan wilayah belum dapat dimuat. Coba pilih ulang."); } finally { setRegionLoading(false); }
+    try { const response = await fetch(`${apiUrl}/api/public/regions/${level}/${code}`); if (!response.ok) throw new Error("Wilayah belum dapat dimuat."); const body = await response.json() as { data: RegionItem[] }; setRegions((value) => ({ ...value, [level]: body.data, ...(level === "regencies" ? { districts: [], villages: [] } : level === "districts" ? { villages: [] } : {}) })); } catch { setMessage("Pilihan wilayah belum dapat dimuat. Coba pilih ulang."); } finally { setRegionLoading(false); }
   }
 
   function selectLocation(key: "province" | "city" | "district" | "village", value: string, code?: string) {
