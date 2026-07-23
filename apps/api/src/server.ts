@@ -284,6 +284,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 function detectedMime(buffer: Buffer) {
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return "image/jpeg";
   if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) return "image/png";
+  if (buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP") return "image/webp";
   return null;
 }
 
@@ -311,7 +312,7 @@ app.post("/api/documents", upload.single("file"), asyncRoute(async (req, res) =>
   const kind = allowedKinds.safeParse(req.body.kind);
   if (!kind.success || !req.file) return void res.status(400).json({ error: { code: "INVALID_DOCUMENT", message: "File wajib JPEG/PNG dan maksimal 5 MB." } });
   const mimeType = detectedMime(req.file.buffer);
-  if (!mimeType) return void res.status(415).json({ error: { code: "UNSUPPORTED_DOCUMENT", message: "Isi file bukan JPEG atau PNG yang valid." } });
+  if (!mimeType) return void res.status(415).json({ error: { code: "UNSUPPORTED_DOCUMENT", message: "Isi file bukan JPEG, PNG, atau WebP yang valid." } });
   if (!env.PRIVATE_STORAGE_PATH || !env.DOCUMENT_ENCRYPTION_KEY) return void res.status(503).json({ error: { code: "STORAGE_UNAVAILABLE", message: "Penyimpanan privat belum tersedia." } });
   const storageKey = `${randomUUID()}.tsenc`;
   await mkdir(env.PRIVATE_STORAGE_PATH, { recursive: true, mode: 0o700 });

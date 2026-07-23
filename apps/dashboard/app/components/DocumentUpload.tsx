@@ -7,9 +7,13 @@ import { apiUrl } from "@/lib/api-client";
 export function DocumentUpload({
   kind,
   label,
+  maxSizeMb = 5,
+  allowWebp = false,
 }: {
   kind: "identity_card" | "identity_selfie" | "profile_photo";
   label: string;
+  maxSizeMb?: number;
+  allowWebp?: boolean;
 }) {
   const [state, setState] = useState<"idle" | "uploading" | "done" | "error">(
     "idle",
@@ -17,6 +21,10 @@ export function DocumentUpload({
   async function upload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      setState("error");
+      return;
+    }
     setState("uploading");
     const body = new FormData();
     body.set("kind", kind);
@@ -35,8 +43,8 @@ export function DocumentUpload({
     >
       <input
         type="file"
-        accept="image/jpeg,image/png"
-        aria-label={`${label}. Pilih file JPEG atau PNG maksimal 5 MB`}
+        accept={allowWebp ? "image/jpeg,image/png,image/webp" : "image/jpeg,image/png"}
+        aria-label={`${label}. Pilih file JPEG, PNG${allowWebp ? ", atau WebP" : ""} maksimal ${maxSizeMb} MB`}
         onChange={upload}
         disabled={state === "uploading"}
       />
@@ -58,7 +66,7 @@ export function DocumentUpload({
               ? "Mengunggah, mengenkripsi, dan menyimpan dengan aman…"
             : state === "error"
               ? "Upload gagal. Pastikan JPEG/PNG maksimal 5 MB."
-              : "JPEG atau PNG, maksimal 5 MB."}
+            : `${allowWebp ? "JPG, PNG, atau WebP" : "JPEG atau PNG"}, maksimal ${maxSizeMb} MB.`}
         </p>
       </div>
     </label>
