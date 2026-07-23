@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, ChevronDown, LoaderCircle, LogOut, Menu, X } from "lucide-react";
@@ -8,6 +8,7 @@ import { authClient } from "@/lib/auth-client";
 import { navForRole, type NavItem } from "@/lib/dashboard-config";
 import { navigationBadge, useDashboardSummary } from "@/lib/dashboard-summary";
 import { roleLabels, type AppRole } from "@/lib/roles";
+import { apiUrl } from "@/lib/api-client";
 
 type PortalUser = {
   name: string;
@@ -39,6 +40,14 @@ export function ParticipantShell({ user, children }: { user: PortalUser; childre
   const summary = useDashboardSummary();
   const primaryMobile = nav.slice(0, 4);
   const remainingMobile = nav.slice(4);
+  const [avatarUrl, setAvatarUrl] = useState(`/avatars/${user.role === "participant_female" ? "pp_akhwat" : "pp_ikhwan"}.png`);
+
+  useEffect(() => {
+    fetch(`${apiUrl}/api/public/avatar-config`).then((response) => response.ok ? response.json() : null).then((body) => {
+      const configured = body?.data?.[user.role];
+      if (configured) setAvatarUrl(configured);
+    }).catch(() => undefined);
+  }, [user.role]);
 
   async function signOut() {
     setSigningOut(true);
@@ -66,7 +75,7 @@ export function ParticipantShell({ user, children }: { user: PortalUser; childre
           </Link>
           <details className="portal-profile">
             <summary>
-              <span>{user.name.slice(0, 2).toUpperCase()}</span>
+              <img className="portal-avatar" src={avatarUrl} alt="" />
               <span className="portal-profile-copy"><strong>{user.name}</strong><small>{user.displayCode}</small></span>
               <ChevronDown aria-hidden="true" />
             </summary>

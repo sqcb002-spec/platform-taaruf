@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { ArrowRight, BellRing, BookOpen, CalendarDays, Check, ChevronRight, EyeOff, FileText, Filter, LoaderCircle, LockKeyhole, LogOut, RefreshCw, Search, ShieldCheck, UserRoundCheck } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
-import { apiFetch } from "@/lib/api-client";
+import { apiFetch, apiUrl } from "@/lib/api-client";
 import { navForRole, sectionCopy } from "@/lib/dashboard-config";
 import { profileFormSections } from "@/lib/profile-form";
 import { roleLabels, type AppRole } from "@/lib/roles";
@@ -97,6 +97,22 @@ function ParticipantSettings({ user }: { user?: { name?: string; email?: string;
     </div>
     <div className="settings-danger"><div><p className="mono">SESI AKUN</p><h3>Keluar dari semua sesi</h3><p>Gunakan ini jika memakai perangkat bersama atau merasa sesi Anda tidak aman.</p></div><button className="app-secondary" onClick={signOut} disabled={signedOut}>{signedOut ? <><LoaderCircle className="spin" /> Keluar…</> : <><LogOut /> Keluar akun</>}</button></div>
   </section>;
+}
+
+function AdminAvatarSettings({ role }: { role: AppRole }) {
+  const [state, setState] = useState<Record<string, string>>({});
+  async function upload(gender: "participant_male" | "participant_female", file?: File) {
+    if (!file) return;
+    setState((value) => ({ ...value, [gender]: "uploading" }));
+    const body = new FormData(); body.set("gender", gender); body.set("file", file);
+    try {
+      const response = await fetch(`${apiUrl}/api/admin/avatar-defaults`, { method: "POST", body, credentials: "include" });
+      setState((value) => ({ ...value, [gender]: response.ok ? "done" : "error" }));
+    } catch { setState((value) => ({ ...value, [gender]: "error" })); }
+  }
+  const can = (gender: "participant_male" | "participant_female") => role === "super_admin" || (role === "admin_male" && gender === "participant_male") || (role === "admin_female" && gender === "participant_female");
+  const card = (gender: "participant_male" | "participant_female", label: string, fileName: string) => <article className={`avatar-setting ${can(gender) ? "" : "is-disabled"}`}><img src={`/avatars/${fileName}.png`} alt={`Avatar default ${label}`} /><div><p className="mono">AVATAR DEFAULT</p><h3>{label}</h3><p>Dipakai otomatis untuk akun yang belum memiliki foto profil terverifikasi.</p><label className="app-secondary avatar-upload"><input type="file" accept="image/png,image/jpeg" disabled={!can(gender) || state[gender] === "uploading"} onChange={(event) => upload(gender, event.target.files?.[0])} />{state[gender] === "uploading" ? <><LoaderCircle className="spin" /> Mengunggah…</> : state[gender] === "done" ? <>Tersimpan</> : state[gender] === "error" ? <>Coba lagi</> : <>Ganti avatar</>}</label>{!can(gender) ? <small>Di luar wilayah admin ini.</small> : null}</div></article>;
+  return <section className="avatar-settings-layout"><div className="dashboard-card avatar-settings-intro"><ShieldCheck /><div><h2>Avatar default peserta</h2><p>Pengaturan ini hanya tersedia untuk admin. Avatar dipisahkan berdasarkan gender dan tidak menggantikan foto verifikasi pribadi peserta.</p></div></div><div className="avatar-settings-grid">{card("participant_male", "Avatar Ikhwan", "pp_ikhwan")}{card("participant_female", "Avatar Akhwat", "pp_akhwat")}</div></section>;
 }
 
 type ParticipantDirectoryResponse = {
@@ -199,6 +215,8 @@ export default function DashboardSectionPage() {
   const copy = sectionCopy[section] ?? { eyebrow: "RUANG KERJA", title: section.replaceAll("-", " "), body: "Kelola informasi dan tindakan yang menjadi kewenangan Anda pada ruang ini." };
   const definition = profileFormSections.find((item) => item.key === selectedKey) ?? profileFormSections[0];
   const percent = Math.round((completed.size / profileFormSections.length) * 100);
+
+  if (section === "konfigurasi" && user) return <><header className="module-heading"><div><p className="mono">KONFIGURASI SISTEM</p><h1>Atur avatar default peserta.</h1><p>Hanya admin yang dapat mengganti avatar fallback ikhwan dan akhwat.</p></div></header><AdminAvatarSettings role={user.role} /></>;
 
   return <>
     <header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}><FileText /> Lihat panduan</Link></header>

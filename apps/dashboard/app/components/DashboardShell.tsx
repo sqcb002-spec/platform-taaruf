@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, ChevronDown, LoaderCircle, LogOut, Menu, Search, X } from "lucide-react";
@@ -8,6 +8,7 @@ import { authClient } from "@/lib/auth-client";
 import { navForRole } from "@/lib/dashboard-config";
 import { navigationBadge, useDashboardSummary } from "@/lib/dashboard-summary";
 import { roleLabels, type AppRole } from "@/lib/roles";
+import { apiUrl } from "@/lib/api-client";
 
 export function DashboardShell({
   user,
@@ -22,6 +23,14 @@ export function DashboardShell({
   const [signingOut, setSigningOut] = useState(false);
   const nav = navForRole(user.role);
   const summary = useDashboardSummary();
+  const [avatarUrl, setAvatarUrl] = useState(`/avatars/${user.role === "participant_female" ? "pp_akhwat" : "pp_ikhwan"}.png`);
+  useEffect(() => {
+    if (!user.role.startsWith("participant_")) return;
+    fetch(`${apiUrl}/api/public/avatar-config`).then((response) => response.ok ? response.json() : null).then((body) => {
+      const configured = body?.data?.[user.role];
+      if (configured) setAvatarUrl(configured);
+    }).catch(() => undefined);
+  }, [user.role]);
 
   async function signOut() {
     setSigningOut(true);
@@ -127,7 +136,7 @@ export function DashboardShell({
               {summary && summary.stats.unreadNotifications > 0 ? <span /> : null}
             </Link>
             <button className="user-menu">
-              <span>{user.name.slice(0, 2).toUpperCase()}</span>
+              <img className="dashboard-avatar" src={avatarUrl} alt="" />
               <div>
                 <strong>{user.name}</strong>
                 <small>{roleLabels[user.role]}</small>

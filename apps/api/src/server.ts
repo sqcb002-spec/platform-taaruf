@@ -13,7 +13,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { allowedOrigins, env, googleOAuthEnabled } from "@/config";
 import { db } from "@/db/index";
-import { auditLogs, documents, jobs, moderationCases, notifications, profileSections, profiles, taarufProcesses, users } from "@/db/schema";
+import { auditLogs, documents, jobs, moderationCases, notifications, platformSettings, profileSections, profiles, taarufProcesses, users } from "@/db/schema";
 import { decryptBuffer, encryptBuffer, encryptJson } from "@/lib/crypto";
 import { profileFormSections, sensitiveSectionKeys } from "@/lib/profile-form";
 import { getSession } from "@/session";
@@ -32,6 +32,8 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "X-Requested-With"],
 }));
+const avatarStoragePath = path.join(env.PRIVATE_STORAGE_PATH ?? "/tmp/taaruf-private", "avatars");
+app.use("/uploads/avatars", express.static(avatarStoragePath, { fallthrough: false, maxAge: "1d" }));
 
 // Better Auth must receive the untouched body before express.json().
 app.all("/api/auth/*splat", toNodeHandler(auth));
@@ -53,6 +55,15 @@ async function requireUser(req: Request, res: Response) {
   }
   return session;
 }
+
+app.get("/api/public/avatar-config", asyncRoute(async (_req, res) => {
+  const rows = await db.select({ key: platformSettings.key, value: platformSettings.value }).from(platformSettings).where(inArray(platformSettings.key, ["avatar.participant_male", "avatar.participant_female"]));
+  const values = new Map(rows.map((row) => [row.key, row.value]));
+  res.set("cache-control", "public, max-age=60, stale-while-revalidate=300").json({ data: {
+    participant_male: values.get("avatar.participant_male") ?? `${env.API_PUBLIC_URL}/uploads/avatars/pp_ikhwan.png`,
+    participant_female: values.get("avatar.participant_female") ?? `${env.API_PUBLIC_URL}/uploads/avatars/pp_akhwat.png`,
+  } });
+}));
 
 app.get("/health", (_req, res) => res.json({ ok: true, service: "taaruf-api", time: new Date().toISOString() }));
 app.get("/ready", asyncRoute(async (_req, res) => {
@@ -255,6 +266,24 @@ function detectedMime(buffer: Buffer) {
   if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) return "image/png";
   return null;
 }
+
+app.post("/api/admin/avatar-defaults", upload.single("file"), asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  if (!["admin_male", "admin_female", "super_admin"].includes(session.user.role)) return void res.status(403).json({ error: { code: "FORBIDDEN", message: "Hanya admin yang dapat mengatur avatar default." } });
+  const gender = z.enum(["participant_male", "participant_female"]).safeParse(req.body.gender);
+  if (!gender.success || !req.file) return void res.status(400).json({ error: { code: "INVALID_AVATAR", message: "Pilih gender dan file avatar PNG/JPEG." } });
+  if ((session.user.role === "admin_male" && gender.data !== "participant_male") || (session.user.role === "admin_female" && gender.data !== "participant_female")) return void res.status(403).json({ error: { code: "FORBIDDEN", message: "Admin hanya dapat mengatur avatar sesuai wilayah gendernya." } });
+  const mimeType = detectedMime(req.file.buffer);
+  if (!mimeType) return void res.status(415).json({ error: { code: "UNSUPPORTED_AVATAR", message: "File avatar harus PNG atau JPEG yang valid." } });
+  await mkdir(avatarStoragePath, { recursive: true, mode: 0o750 });
+  const filename = `${gender.data === "participant_male" ? "pp_ikhwan" : "pp_akhwat"}.${mimeType === "image/png" ? "png" : "jpg"}`;
+  await writeFile(path.join(avatarStoragePath, filename), req.file.buffer, { mode: 0o640 });
+  const url = `${env.API_PUBLIC_URL}/uploads/avatars/${filename}?v=${Date.now()}`;
+  await db.insert(platformSettings).values({ key: `avatar.${gender.data}`, value: url, updatedBy: session.user.id }).onConflictDoUpdate({ target: platformSettings.key, set: { value: url, updatedBy: session.user.id, updatedAt: new Date() } });
+  await db.insert(auditLogs).values({ actorId: session.user.id, action: "avatar.default.updated", targetType: "platform_setting", targetId: `avatar.${gender.data}`, metadata: { mimeType, size: req.file.size } });
+  res.status(201).json({ data: { gender: gender.data, url } });
+}));
 
 app.post("/api/documents", upload.single("file"), asyncRoute(async (req, res) => {
   const session = await requireUser(req, res);

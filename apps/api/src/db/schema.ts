@@ -469,3 +469,10 @@ export const auditLogs = pgTable("audit_logs", {
     .defaultNow()
     .notNull(),
 });
+export const platformSettings = pgTable("platform_settings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  key: text("key").notNull(),
+  value: text("value").notNull(),
+  updatedBy: text("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("platform_settings_key_idx").on(table.key)]);
