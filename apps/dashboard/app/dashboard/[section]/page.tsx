@@ -14,7 +14,7 @@ import { DocumentUpload } from "@/app/components/DocumentUpload";
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 const onboardingGroups = [
-  { key: "data-diri", label: "Data diri", description: "Identitas, pendidikan, ibadah, dan gambaran diri.", sections: ["profile", "education", "religion", "self", "experience"] },
+  { key: "data-diri", label: "Data diri", description: "Identitas, pendidikan, gambaran diri, dan pengalaman.", sections: ["profile", "education", "self", "experience"] },
   { key: "fisik", label: "Fisik", description: "Gambaran fisik dan pola hidup yang relevan.", sections: ["physical", "lifestyle", "emotion"] },
   { key: "keluarga", label: "Keluarga", description: "Keluarga, visi pernikahan, dan referensi.", sections: ["family", "marriage", "future", "criteria_physical", "criteria_nonphysical", "partner_questions", "life_story", "references"] },
 ];
@@ -80,6 +80,35 @@ function OnboardingProgress({ activeGroup, completed, percent, selectedKey }: { 
 
 function QueueModule({ section }: { section: string }) {
   return <section className="queue-card"><div className="queue-tools"><div className="queue-search"><Search /><input placeholder="Cari kode atau status…" /></div><button><Filter /> Filter</button></div><div className="data-table"><div className="data-row data-head"><span>Kode / proses</span><span>Status</span><span>Informasi utama</span><span>Tenggat</span><span /></div><div className="empty-queue"><Search /><h3>Belum ada data pada ruang ini.</h3><p>{section === "rekomendasi" ? "Rekomendasi muncul setelah seluruh biodata dan verifikasi disetujui." : "Item baru akan muncul otomatis ketika membutuhkan tindakan Anda."}</p></div></div></section>;
+}
+
+const requiredQuestionKeys = ["religion", "partner_questions"] as const;
+
+function RequiredQuestions() {
+  const [topic, setTopic] = useState<typeof requiredQuestionKeys[number]>("religion");
+  const [completed, setCompleted] = useState<Set<string>>(new Set());
+  const [onboardingReady, setOnboardingReady] = useState<boolean | null>(null);
+  const [state, setState] = useState<SaveState>("idle");
+  const [message, setMessage] = useState("");
+  const definition = profileFormSections.find((item) => item.key === topic)!;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    apiFetch<Array<{ key: string; status: string }>>("/api/profile/sections", { signal: controller.signal }).then((rows) => { const done = new Set(rows.filter((row) => row.status === "complete").map((row) => row.key)); setCompleted(done); setOnboardingReady(onboardingGroups.flatMap((group) => group.sections).every((key) => done.has(key))); }).catch((reason) => { if (reason?.name !== "AbortError") setMessage("Status jawaban belum dapat dimuat."); });
+    return () => controller.abort();
+  }, []);
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setState("saving"); setMessage("");
+    try { const values = Object.fromEntries(new FormData(event.currentTarget)); await apiFetch(`/api/profile/sections/${topic}`, { method: "PUT", body: JSON.stringify(values) }); setCompleted((value) => new Set(value).add(topic)); setState("saved"); } catch (error) { setState("error"); setMessage(error instanceof Error ? error.message : "Jawaban belum dapat disimpan."); }
+  }
+
+  if (onboardingReady === false) return <section className="dashboard-card required-questions-locked"><ShieldCheck /><div><h2>Selesaikan biodata dasar terlebih dahulu.</h2><p>Pertanyaan wajib dibuka setelah tiga tahap onboarding selesai. Jawaban dasar membantu pertanyaan ini dibaca dalam konteks yang benar.</p><Link href="/dashboard/biodata" className="app-primary" prefetch={false}>Lanjutkan onboarding <ArrowRight /></Link></div></section>;
+  return <section className="required-questions-layout">
+    <div className="required-questions-intro"><div><p className="mono">LANJUTAN SETELAH BIODATA</p><h2>Pertanyaan wajib untuk proses yang amanah.</h2><p>Jawaban tidak dinilai otomatis dan tidak menjadi konsumsi kandidat. Admin atau mediator hanya melihatnya sesuai kewenangan.</p></div><strong>{requiredQuestionKeys.filter((key) => completed.has(key)).length}/{requiredQuestionKeys.length}<small>topik selesai</small></strong></div>
+    <nav className="question-topics" aria-label="Topik pertanyaan wajib">{requiredQuestionKeys.map((key, index) => { const item = profileFormSections.find((entry) => entry.key === key)!; return <button key={key} className={`${topic === key ? "active" : ""} ${completed.has(key) ? "complete" : ""}`} onClick={() => { setTopic(key); setState("idle"); setMessage(""); }}><span>{completed.has(key) ? <Check /> : index + 1}</span><div><strong>{key === "religion" ? "Ibadah & pemahaman" : "Respons dalam rumah tangga"}</strong><small>{completed.has(key) ? "Selesai" : item.description}</small></div></button>; })}</nav>
+    <form className="form-card required-question-form" onSubmit={submit}><header><div><p className="mono">TOPIK {requiredQuestionKeys.indexOf(topic) + 1} DARI {requiredQuestionKeys.length}</p><h2>{topic === "religion" ? "Ibadah & pemahaman agama" : "Pertanyaan pasangan ta’aruf"}</h2><p>{definition.description}</p></div><span className="autosave"><span /> Jawaban privat</span></header><div className="question-list">{definition.fields.map((field) => <label key={field.name}><span>{field.label} <em>*</em></span>{field.type === "textarea" ? <textarea name={field.name} rows={4} required placeholder="Tuliskan jawaban Anda dengan ringkas dan jujur…" /> : <input name={field.name} type={field.type ?? "text"} required placeholder="Tulis jawaban Anda…" />}</label>)}</div><PrivacyNote />{message ? <p className="form-error" role="alert">{message}</p> : null}{state === "saved" ? <p className="form-success">Topik tersimpan. Lanjutkan ke topik berikutnya.</p> : null}<footer><button type="button" className="app-secondary" disabled={topic === "religion"} onClick={() => setTopic("religion")}>Sebelumnya</button><button className="app-primary" disabled={state === "saving"}>{state === "saving" ? <><LoaderCircle className="spin" /> Menyimpan…</> : <>Simpan jawaban <ChevronRight /></>}</button></footer></form>
+  </section>;
 }
 
 const guideSections = [
@@ -235,6 +264,7 @@ export default function DashboardSectionPage() {
   const percent = Math.round((onboardingCompleted.size / onboardingSections.length) * 100);
 
   if (section === "konfigurasi" && user) return <><header className="module-heading"><div><p className="mono">KONFIGURASI SISTEM</p><h1>Atur avatar default peserta.</h1><p>Hanya admin yang dapat mengganti avatar fallback ikhwan dan akhwat.</p></div></header><AdminAvatarSettings role={user.role} /></>;
+  if (section === "pertanyaan-wajib") return <><header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/biodata" className="app-secondary" prefetch={false}><FileText /> Kembali ke biodata</Link></header><RequiredQuestions /></>;
 
   return <>
     {section === "biodata" ? <OnboardingProgress activeGroup={activeGroup} completed={completed} percent={percent} selectedKey={selectedKey} /> : null}

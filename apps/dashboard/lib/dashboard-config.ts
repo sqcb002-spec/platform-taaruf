@@ -37,6 +37,7 @@ const participant: NavItem[] = [
     href: "/dashboard/biodata",
     icon: CircleUserRound,
   },
+  { label: "Pertanyaan Wajib", href: "/dashboard/pertanyaan-wajib", icon: ClipboardCheck },
   { label: "Rekomendasi", href: "/dashboard/rekomendasi", icon: Search },
   { label: "Pengajuan", href: "/dashboard/pengajuan", icon: HeartHandshake },
   { label: "Proses Ta’aruf", href: "/dashboard/proses", icon: Activity },
@@ -136,6 +137,11 @@ export const sectionCopy: Record<
     eyebrow: "KOMUNIKASI RESMI",
     title: "Pembahasan terarah dan terdampingi.",
     body: "Inbox bukan chat bebas. Pertanyaan, jawaban, dan arahan mediator tersusun berdasarkan tujuan pernikahan.",
+  },
+  "pertanyaan-wajib": {
+    eyebrow: "PERTANYAAN WAJIB",
+    title: "Jawab dengan jujur, bukan untuk mencari nilai.",
+    body: "Pertanyaan ini membantu admin dan mediator memahami pemahaman agama, kebiasaan ibadah, serta cara Anda menghadapi kehidupan rumah tangga.",
   },
   verifikasi: {
     eyebrow: "ANTREAN AMANAH",
