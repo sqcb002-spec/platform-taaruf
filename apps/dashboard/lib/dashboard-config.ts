@@ -161,4 +161,14 @@ export const sectionCopy: Record<
     title: "Keputusan terpisah, jelas, dan tercatat.",
     body: "Persetujuan wali tidak menggantikan keputusan akhwat dan hanya berlaku untuk calon serta versi SOP tertentu.",
   },
+  panduan: {
+    eyebrow: "PUSAT PANDUAN",
+    title: "Pahami setiap tahap sebelum melangkah.",
+    body: "Panduan ringkas tentang adab, privasi, persetujuan, dan alur ta’aruf yang menjadi dasar penggunaan platform.",
+  },
+  pengaturan: {
+    eyebrow: "PENGATURAN AKUN",
+    title: "Kelola akun dengan aman dan sadar.",
+    body: "Atur keamanan, privasi, dan status akun Anda. Perubahan penting selalu tercatat dan mengikuti SOP platform.",
+  },
 };

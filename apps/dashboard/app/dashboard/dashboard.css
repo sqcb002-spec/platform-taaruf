@@ -1605,6 +1605,45 @@
 .portal-mobile-sheet nav svg { width: 1.1rem; }
 
 .portal-overview-loading { display: grid; gap: 0.8rem; }
+
+.guide-layout,
+.settings-layout { display: grid; gap: 1rem; }
+.guide-intro { display: flex; gap: 1rem; align-items: flex-start; padding: clamp(1.2rem, 3vw, 2rem); border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: linear-gradient(135deg, var(--color-paper-2), var(--color-paper)); }
+.guide-intro > svg { flex: 0 0 auto; width: 1.6rem; color: var(--color-accent); }
+.guide-intro h2 { margin: 0; font-family: var(--font-display); font-size: clamp(1.35rem, 3vw, 2rem); }
+.guide-intro p { max-width: 52rem; margin: .55rem 0 0; color: var(--color-muted); line-height: 1.7; }
+.guide-list { display: grid; gap: .65rem; }
+.guide-list details { border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); overflow: hidden; transition: border-color var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out); }
+.guide-list details[open] { border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-rule)); }
+.guide-list details:hover { transform: translateY(-1px); }
+.guide-list summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.05rem 1.2rem; cursor: pointer; list-style: none; font-weight: 800; }
+.guide-list summary::-webkit-details-marker { display: none; }
+.guide-list summary svg { width: 1rem; transition: transform var(--dur-short) var(--ease-out); }
+.guide-list details[open] summary svg { transform: rotate(90deg); }
+.guide-list details p { margin: 0; padding: 0 1.2rem 1.2rem; color: var(--color-muted); line-height: 1.75; }
+.guide-actions { display: flex; flex-wrap: wrap; gap: .7rem; padding-top: .3rem; }
+.settings-identity { display: flex; align-items: center; gap: 1rem; padding: 1.35rem; }
+.settings-icon { display: grid; place-items: center; width: 3.25rem; height: 3.25rem; border-radius: 50%; background: var(--color-cyan-soft); color: var(--color-accent-deep); }
+.settings-icon svg { width: 1.4rem; }
+.settings-identity h2 { margin: .15rem 0 .2rem; font-family: var(--font-display); }
+.settings-identity p:not(.mono) { margin: 0 0 .65rem; color: var(--color-muted); }
+.status-chip { display: inline-flex; align-items: center; gap: .4rem; color: var(--color-accent-deep); font-size: .72rem; font-weight: 800; }
+.status-chip > span { width: .45rem; height: .45rem; border-radius: 50%; background: var(--color-accent); }
+.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.settings-card { display: flex; gap: .9rem; padding: 1.25rem; border: 1px solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); }
+.settings-card > svg { flex: 0 0 auto; width: 1.3rem; color: var(--color-accent); }
+.settings-card h3 { margin: 0; font-size: 1rem; }
+.settings-card p { margin: .5rem 0 0; color: var(--color-muted); line-height: 1.65; font-size: .86rem; }
+.settings-link { display: inline-flex; align-items: center; gap: .35rem; margin-top: .85rem; color: var(--color-accent-deep); font-size: .78rem; font-weight: 800; }
+.settings-link svg { width: .9rem; transition: transform var(--dur-short) var(--ease-out); }
+.settings-link:hover svg { transform: translateX(3px); }
+.settings-muted { display: inline-block; margin-top: .8rem; color: var(--color-muted); font-size: .75rem; font-weight: 700; }
+.settings-danger { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.25rem; border: 1px solid color-mix(in srgb, var(--color-coral) 32%, var(--color-rule)); border-radius: var(--radius-card); background: var(--color-coral-soft); }
+.settings-danger h3 { margin: 0; }
+.settings-danger p:not(.mono) { margin: .4rem 0 0; color: var(--color-muted); font-size: .82rem; }
+.settings-danger button { flex: 0 0 auto; }
+
+@media (max-width: 40rem) { .settings-grid { grid-template-columns: 1fr; } .settings-danger { align-items: flex-start; flex-direction: column; } }
 .portal-overview-loading > p { margin-top: 0.6rem; display: flex; align-items: center; gap: 0.5rem; color: var(--color-muted); font-size: 0.75rem; }
 .portal-overview-loading > p svg { width: 1rem; color: var(--color-accent); }
 .portal-skeleton-kicker { width: 11rem; height: 0.75rem; }
