@@ -269,7 +269,7 @@ app.put("/api/profile/sections/:section", asyncRoute(async (req, res) => {
   const definition = profileFormSections.find((item) => item.key === req.params.section);
   if (!definition || ["profile", "identity"].includes(definition.key)) return void res.status(404).json({ error: { code: "UNKNOWN_SECTION", message: "Bagian biodata tidak ditemukan." } });
   const answers = Object.fromEntries(definition.fields.map((field) => [field.name, String(req.body?.[field.name] ?? "").trim()]));
-  if (Object.values(answers).some((answer) => answer.length < 1)) return void res.status(400).json({ error: { code: "INCOMPLETE_SECTION", message: "Semua pertanyaan pada bagian ini wajib dijawab." } });
+  if (definition.fields.some((field) => field.required !== false && !answers[field.name])) return void res.status(400).json({ error: { code: "INCOMPLETE_SECTION", message: "Semua pertanyaan wajib harus dijawab." } });
   const sensitive = sensitiveSectionKeys.has(definition.key) || definition.fields.some((field) => field.sensitive);
   await db.insert(profileSections).values({ userId: session.user.id, key: definition.key, status: "complete", answers: sensitive ? { protected: true } : answers, encryptedAnswers: sensitive ? encryptJson(answers) : null }).onConflictDoUpdate({ target: [profileSections.userId, profileSections.key], set: { status: "complete", answers: sensitive ? { protected: true } : answers, encryptedAnswers: sensitive ? encryptJson(answers) : null, updatedAt: new Date() } });
   const [completed] = await db.select({ value: count() }).from(profileSections).where(and(eq(profileSections.userId, session.user.id), eq(profileSections.status, "complete")));

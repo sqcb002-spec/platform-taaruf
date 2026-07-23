@@ -4,6 +4,7 @@ export type ProfileField = {
   type?: "text" | "textarea" | "number" | "date" | "select";
   options?: string[];
   sensitive?: boolean;
+  required?: boolean;
 };
 export type ProfileSectionDefinition = {
   key: string;
@@ -35,11 +36,10 @@ export const profileFormSections: ProfileSectionDefinition[] = [
     fields: [
       { name: "heightCm", label: "Tinggi badan (cm)", type: "number" },
       { name: "weightKg", label: "Berat badan (kg)", type: "number" },
-      { name: "skinTone", label: "Deskripsi warna kulit" },
-      { name: "appearance", label: "Gambaran penampilan", type: "textarea" },
-      { name: "veil", label: "Menggunakan cadar / ketentuan berpakaian" },
-      { name: "isbal", label: "Kebiasaan terkait isbal" },
-      { name: "beard", label: "Kebiasaan memelihara janggut" },
+      { name: "skinTone", label: "Warna kulit", type: "select", options: ["Putih", "Kuning langsat", "Sawo matang", "Cokelat", "Gelap"] },
+      { name: "hairType", label: "Tipe rambut", type: "select", options: ["Lurus", "Bergelombang", "Ikal", "Keriting", "Botak"] },
+      { name: "physicalDisability", label: "Cacat fisik", type: "textarea", required: false },
+      { name: "medicalHistory", label: "Riwayat penyakit", type: "textarea", required: false },
     ],
   },
   {
