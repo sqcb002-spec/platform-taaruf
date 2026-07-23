@@ -16,8 +16,8 @@ export type ProfileSectionDefinition = {
 export const profileFormSections: ProfileSectionDefinition[] = [
   {
     key: "profile",
-    label: "Profil utama",
-    description: "Identitas dasar, domisili, status, dan pekerjaan.",
+    label: "Data diri",
+    description: "Informasi dasar untuk memulai proses.",
     fields: [],
   },
   {
