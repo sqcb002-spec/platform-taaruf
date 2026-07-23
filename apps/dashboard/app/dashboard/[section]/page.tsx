@@ -13,6 +13,12 @@ import { DocumentUpload } from "@/app/components/DocumentUpload";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
+const onboardingGroups = [
+  { key: "data-diri", label: "Data diri", description: "Identitas, pendidikan, ibadah, dan gambaran diri.", sections: ["profile", "education", "religion", "self", "experience"] },
+  { key: "fisik", label: "Fisik", description: "Gambaran fisik dan pola hidup yang relevan.", sections: ["physical", "lifestyle", "emotion"] },
+  { key: "keluarga", label: "Keluarga", description: "Keluarga, visi pernikahan, dan referensi.", sections: ["family", "marriage", "future", "criteria_physical", "criteria_nonphysical", "partner_questions", "life_story", "references"] },
+];
+
 function PrivacyNote() {
   return <div className="sensitive-note"><ShieldCheck /><div><strong>Visibilitas data dijaga bertahap</strong><p>Nama lengkap, kontak, dokumen identitas, dan jawaban sensitif hanya dipakai sesuai kewenangan dan tidak ditampilkan otomatis kepada kandidat.</p></div></div>;
 }
@@ -61,6 +67,15 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
     {state === "saved" ? <p className="form-success">Bagian tersimpan dan progres telah diperbarui.</p> : null}
     <footer><Link href="/dashboard" className="app-secondary" prefetch={false}>Simpan nanti</Link><button className="app-primary" disabled={state === "saving"}>{state === "saving" ? <><LoaderCircle className="spin" /> Menyimpan…</> : <>Simpan bagian <ChevronRight /></>}</button></footer>
   </form>;
+}
+
+function OnboardingProgress({ activeGroup, completed, percent, selectedKey }: { activeGroup: typeof onboardingGroups[number]; completed: Set<string>; percent: number; selectedKey: string }) {
+  return <div className="onboarding-progress">
+    <div className="onboarding-progress-head"><div><p className="mono">BIODATA DIRI</p><h2>Lengkapi data Anda dengan tenang.</h2><p>Tiga tahap singkat. Anda dapat menyimpan dan melanjutkan kapan saja.</p></div><strong>{percent}%<small>progres</small></strong></div>
+    <div className="onboarding-steps">{onboardingGroups.map((group, index) => { const done = group.sections.every((key) => completed.has(key)); const current = group.key === activeGroup.key; return <Link key={group.key} href={`/dashboard/biodata?bagian=${group.sections[0]}`} prefetch={false} className={`onboarding-step ${current ? "current" : ""} ${done ? "complete" : ""}`}><span>{done ? <Check /> : index + 1}</span><div><strong>{group.label}</strong><small>{done ? "Selesai" : current ? "Sedang diisi" : group.description}</small></div></Link>; })}</div>
+    <div className="onboarding-subnav"><span>Bagian tahap ini</span>{activeGroup.sections.map((key, index) => { const item = profileFormSections.find((entry) => entry.key === key); return <Link key={key} href={`/dashboard/biodata?bagian=${key}`} prefetch={false} className={item?.key === selectedKey ? "active" : ""}>{index + 1}. {item?.label ?? key}</Link>; })}</div>
+    <div className="onboarding-note"><ShieldCheck /><span>Foto KTP dan selfie tidak termasuk onboarding biodata. Verifikasi identitas dilakukan privat setelah data awal selesai.</span></div>
+  </div>;
 }
 
 function QueueModule({ section }: { section: string }) {
@@ -197,6 +212,7 @@ export default function DashboardSectionPage() {
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
   const selectedKey = query.get("bagian") ?? "profile";
+  const activeGroup = onboardingGroups.find((group) => group.sections.includes(selectedKey)) ?? onboardingGroups[0];
 
   useEffect(() => {
     if (section !== "biodata") return;
@@ -213,12 +229,15 @@ export default function DashboardSectionPage() {
   const allowed = useMemo(() => user ? navForRole(user.role).some((item) => item.href === `/dashboard/${section}`) : true, [section, user]);
   if (!allowed) return <section className="dashboard-error"><ShieldCheck /><h1>Ruang ini bukan bagian dari amanah Anda.</h1><Link className="app-primary" href="/dashboard">Kembali ke dashboard</Link></section>;
   const copy = sectionCopy[section] ?? { eyebrow: "RUANG KERJA", title: section.replaceAll("-", " "), body: "Kelola informasi dan tindakan yang menjadi kewenangan Anda pada ruang ini." };
-  const definition = profileFormSections.find((item) => item.key === selectedKey) ?? profileFormSections[0];
-  const percent = Math.round((completed.size / profileFormSections.length) * 100);
+  const definition = profileFormSections.find((item) => item.key === selectedKey) ?? profileFormSections.find((item) => item.key === activeGroup.sections[0])!;
+  const onboardingSections = onboardingGroups.flatMap((group) => group.sections);
+  const onboardingCompleted = new Set(onboardingSections.filter((key) => completed.has(key)));
+  const percent = Math.round((onboardingCompleted.size / onboardingSections.length) * 100);
 
   if (section === "konfigurasi" && user) return <><header className="module-heading"><div><p className="mono">KONFIGURASI SISTEM</p><h1>Atur avatar default peserta.</h1><p>Hanya admin yang dapat mengganti avatar fallback ikhwan dan akhwat.</p></div></header><AdminAvatarSettings role={user.role} /></>;
 
   return <>
+    {section === "biodata" ? <OnboardingProgress activeGroup={activeGroup} completed={completed} percent={percent} selectedKey={selectedKey} /> : null}
     <header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}><FileText /> Lihat panduan</Link></header>
     {section !== "biodata" ? section === "peserta" ? <ParticipantDirectory /> : section === "panduan" ? <ParticipantGuide /> : section === "pengaturan" ? <ParticipantSettings user={user} /> : <QueueModule section={section} /> : loading ? <section className="dashboard-loading"><div className="skeleton skeleton-panel" /><p><LoaderCircle className="spin" /> Memuat progres biodata…</p></section> : error ? <section className="dashboard-error"><ShieldCheck /><h2>Progres biodata belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section> : <div className="biodata-layout"><aside className="section-progress"><div><strong>{percent}%</strong><span>{completed.size} dari {profileFormSections.length} bagian</span></div>{profileFormSections.map((item, index) => <Link key={item.key} href={`/dashboard/biodata?bagian=${item.key}`} prefetch={false} className={`${item.key === definition.key ? "current" : ""} ${completed.has(item.key) ? "complete" : ""}`}><span>{completed.has(item.key) ? <Check /> : index + 1}</span>{item.label}<ChevronRight /></Link>)}</aside><section className="form-card"><header><div><p className="mono">BAGIAN {String(profileFormSections.indexOf(definition) + 1).padStart(2, "0")}</p><h2>{definition.label}</h2><p>{definition.description}</p></div><span className="autosave"><span /> Data privat</span></header>{user ? <ProfileForm sectionKey={definition.key} role={user.role} onSaved={() => setReload((value) => value + 1)} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section></div>}
   </>;
