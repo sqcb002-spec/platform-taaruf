@@ -8,7 +8,7 @@ import helmet from "helmet";
 import multer from "multer";
 import pinoHttp from "pino-http";
 import { toNodeHandler } from "better-auth/node";
-import { and, count, desc, eq, inArray, isNull, lt, notInArray, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, isNull, lt, notInArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { allowedOrigins, env, googleOAuthEnabled } from "@/config";
@@ -154,6 +154,55 @@ app.get("/api/dashboard/summary", asyncRoute(async (req, res) => {
         overdueProcesses: overdueProcesses.value,
       },
       recentActivity,
+    },
+  });
+}));
+
+const participantDirectoryQuery = z.object({
+  q: z.string().trim().max(80).default(""),
+});
+
+app.get("/api/admin/participants", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  const role = session.user.role;
+  if (role !== "admin_male" && role !== "admin_female" && role !== "super_admin") {
+    return void res.status(403).json({ error: { code: "FORBIDDEN", message: "Akses ditolak." } });
+  }
+  const parsed = participantDirectoryQuery.safeParse(req.query);
+  if (!parsed.success) return void res.status(400).json({ error: { code: "INVALID_QUERY", message: "Pencarian tidak valid." } });
+  const genderScope = role === "admin_male"
+    ? eq(users.role, "participant_male")
+    : role === "admin_female"
+      ? eq(users.role, "participant_female")
+      : inArray(users.role, ["participant_male", "participant_female"]);
+  const term = parsed.data.q ? `%${parsed.data.q}%` : "";
+  const searchScope = term
+    ? or(ilike(users.displayCode, term), ilike(users.name, term), ilike(users.email, term))
+    : undefined;
+  const where = and(genderScope, searchScope);
+  const [rows, [total]] = await Promise.all([
+    db.select({
+      id: users.id,
+      displayCode: users.displayCode,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+      status: users.status,
+      emailVerified: users.emailVerified,
+      createdAt: users.createdAt,
+      completionPercent: profiles.completionPercent,
+    }).from(users).leftJoin(profiles, eq(profiles.userId, users.id)).where(where).orderBy(desc(users.createdAt)).limit(50),
+    db.select({ value: count() }).from(users).where(where),
+  ]);
+  res.json({
+    data: {
+      items: rows.map(({ email, completionPercent, ...participant }) => ({
+        ...participant,
+        completionPercent: completionPercent ?? 0,
+        ...(role === "super_admin" ? { email } : {}),
+      })),
+      total: total.value,
     },
   });
 }));
