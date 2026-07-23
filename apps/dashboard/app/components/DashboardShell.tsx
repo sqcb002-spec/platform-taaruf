@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Bell, ChevronDown, LoaderCircle, LogOut, Menu, Search, X } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { navForRole } from "@/lib/dashboard-config";
+import { navigationBadge, useDashboardSummary } from "@/lib/dashboard-summary";
 import { roleLabels, type AppRole } from "@/lib/roles";
 
 export function DashboardShell({
@@ -20,6 +21,7 @@ export function DashboardShell({
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const nav = navForRole(user.role);
+  const summary = useDashboardSummary();
 
   async function signOut() {
     setSigningOut(true);
@@ -56,7 +58,7 @@ export function DashboardShell({
           <small>{user.displayCode}</small>
         </div>
         <nav className="app-nav" aria-label="Navigasi dashboard">
-          {nav.map(({ href, label, icon: Icon, badge }) => {
+          {nav.map(({ href, label, icon: Icon }) => {
             const active =
               href === "/dashboard"
                 ? pathname === href
@@ -71,7 +73,7 @@ export function DashboardShell({
               >
                 <Icon />
                 <span>{label}</span>
-                {badge ? <small>{badge}</small> : null}
+                {navigationBadge(href, summary) ? <small>{navigationBadge(href, summary)}</small> : null}
               </Link>
             );
           })}
@@ -122,7 +124,7 @@ export function DashboardShell({
               className="notification-button"
             >
               <Bell />
-              <span />
+              {summary && summary.stats.unreadNotifications > 0 ? <span /> : null}
             </Link>
             <button className="user-menu">
               <span>{user.name.slice(0, 2).toUpperCase()}</span>

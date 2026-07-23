@@ -22,7 +22,6 @@ export type NavItem = {
   label: string;
   href: string;
   icon: typeof LayoutDashboard;
-  badge?: string;
 };
 
 const common: NavItem[] = [
@@ -37,7 +36,6 @@ const participant: NavItem[] = [
     label: "Biodata",
     href: "/dashboard/biodata",
     icon: CircleUserRound,
-    badge: "32%",
   },
   { label: "Rekomendasi", href: "/dashboard/rekomendasi", icon: Search },
   { label: "Pengajuan", href: "/dashboard/pengajuan", icon: HeartHandshake },
@@ -73,7 +71,6 @@ const admin: NavItem[] = [
     label: "Antrean Verifikasi",
     href: "/dashboard/verifikasi",
     icon: ClipboardCheck,
-    badge: "12",
   },
   { label: "Data Peserta", href: "/dashboard/peserta", icon: Users },
   { label: "Kurasi Kandidat", href: "/dashboard/kurasi", icon: Search },

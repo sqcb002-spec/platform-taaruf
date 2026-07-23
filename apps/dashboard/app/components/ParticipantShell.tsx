@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Bell, ChevronDown, LoaderCircle, LogOut, Menu, X } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { navForRole, type NavItem } from "@/lib/dashboard-config";
+import { navigationBadge, useDashboardSummary } from "@/lib/dashboard-summary";
 import { roleLabels, type AppRole } from "@/lib/roles";
 
 type PortalUser = {
@@ -35,6 +36,7 @@ export function ParticipantShell({ user, children }: { user: PortalUser; childre
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const nav = navForRole(user.role);
+  const summary = useDashboardSummary();
   const primaryMobile = nav.slice(0, 4);
   const remainingMobile = nav.slice(4);
 
@@ -60,6 +62,7 @@ export function ParticipantShell({ user, children }: { user: PortalUser; childre
         <div className="portal-header-actions">
           <Link href="/dashboard/notifikasi" className="portal-icon-button" prefetch={false} aria-label="Buka notifikasi">
             <Bell aria-hidden="true" />
+            {summary && summary.stats.unreadNotifications > 0 ? <span className="portal-notification-dot" /> : null}
           </Link>
           <details className="portal-profile">
             <summary>
@@ -84,6 +87,7 @@ export function ParticipantShell({ user, children }: { user: PortalUser; childre
         {nav.map(({ href, label }) => (
           <Link key={href} href={href} prefetch={false} className={isActive(pathname, href) ? "active" : ""}>
             {label}
+            {navigationBadge(href, summary) ? <small>{navigationBadge(href, summary)}</small> : null}
           </Link>
         ))}
       </nav>

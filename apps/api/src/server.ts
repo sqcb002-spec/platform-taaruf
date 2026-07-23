@@ -8,12 +8,12 @@ import helmet from "helmet";
 import multer from "multer";
 import pinoHttp from "pino-http";
 import { toNodeHandler } from "better-auth/node";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, lt, notInArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { allowedOrigins, env, googleOAuthEnabled } from "@/config";
 import { db } from "@/db/index";
-import { auditLogs, documents, jobs, profileSections, profiles, users } from "@/db/schema";
+import { auditLogs, documents, jobs, moderationCases, notifications, profileSections, profiles, taarufProcesses, users } from "@/db/schema";
 import { decryptBuffer, encryptBuffer, encryptJson } from "@/lib/crypto";
 import { profileFormSections, sensitiveSectionKeys } from "@/lib/profile-form";
 import { getSession } from "@/session";
@@ -92,7 +92,70 @@ app.get("/api/dashboard/summary", asyncRoute(async (req, res) => {
   if (!session) return;
   const isParticipant = session.user.role.startsWith("participant_");
   const [profile] = isParticipant ? await db.select({ completionPercent: profiles.completionPercent }).from(profiles).where(eq(profiles.userId, session.user.id)).limit(1) : [];
-  res.json({ data: { user: session.user, completionPercent: profile?.completionPercent ?? 0 } });
+  const role = session.user.role;
+  const isAdmin = role === "admin_male" || role === "admin_female" || role === "super_admin";
+  const activeStatuses = notInArray(taarufProcesses.status, ["married", "withdrawn", "expired", "closed"]);
+  const processScope = isParticipant
+    ? or(eq(taarufProcesses.maleParticipantId, session.user.id), eq(taarufProcesses.femaleParticipantId, session.user.id))
+    : role === "guardian"
+      ? eq(taarufProcesses.guardianId, session.user.id)
+      : role === "mediator"
+        ? eq(taarufProcesses.mediatorId, session.user.id)
+        : undefined;
+  const verificationScope = role === "admin_male"
+    ? eq(users.role, "participant_male")
+    : role === "admin_female"
+      ? eq(users.role, "participant_female")
+      : undefined;
+  const participantScope = role === "admin_male"
+    ? eq(users.role, "participant_male")
+    : role === "admin_female"
+      ? eq(users.role, "participant_female")
+      : inArray(users.role, ["participant_male", "participant_female"]);
+
+  const [
+    [verificationQueue],
+    [activeProcesses],
+    [unreadNotifications],
+    [openCases],
+    [totalParticipants],
+    [overdueProcesses],
+    recentActivity,
+  ] = await Promise.all([
+    isAdmin
+      ? db.select({ value: count() }).from(documents).innerJoin(users, eq(documents.ownerId, users.id)).where(and(inArray(documents.status, ["pending", "processing"]), verificationScope))
+      : Promise.resolve([{ value: 0 }]),
+    db.select({ value: count() }).from(taarufProcesses).where(and(activeStatuses, processScope)),
+    db.select({ value: count() }).from(notifications).where(and(eq(notifications.userId, session.user.id), isNull(notifications.readAt))),
+    isAdmin
+      ? db.select({ value: count() }).from(moderationCases).where(eq(moderationCases.status, "open"))
+      : Promise.resolve([{ value: 0 }]),
+    isAdmin
+      ? db.select({ value: count() }).from(users).where(participantScope)
+      : Promise.resolve([{ value: 0 }]),
+    db.select({ value: count() }).from(taarufProcesses).where(and(activeStatuses, processScope, lt(taarufProcesses.deadlineAt, new Date()))),
+    db.select({ id: auditLogs.id, action: auditLogs.action, targetType: auditLogs.targetType, createdAt: auditLogs.createdAt })
+      .from(auditLogs)
+      .where(role === "super_admin" ? undefined : eq(auditLogs.actorId, session.user.id))
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(5),
+  ]);
+
+  res.json({
+    data: {
+      user: session.user,
+      completionPercent: profile?.completionPercent ?? 0,
+      stats: {
+        verificationQueue: verificationQueue.value,
+        activeProcesses: activeProcesses.value,
+        unreadNotifications: unreadNotifications.value,
+        openCases: openCases.value,
+        totalParticipants: totalParticipants.value,
+        overdueProcesses: overdueProcesses.value,
+      },
+      recentActivity,
+    },
+  });
 }));
 
 app.get("/api/profile/sections", asyncRoute(async (req, res) => {

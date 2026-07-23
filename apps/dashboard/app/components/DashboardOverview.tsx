@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCircle2, Clock3, FileText, HeartHandshake, LoaderCircle, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { authClient } from "@/lib/auth-client";
+import type { DashboardSummary } from "@/lib/dashboard-summary";
 import { roleLabels, type AppRole } from "@/lib/roles";
 
 const roleContent = {
@@ -17,7 +18,15 @@ const roleContent = {
   super_admin: { title: "Operasional platform dalam kendali.", body: "Pantau antrean, kebijakan, worker, dan kejadian yang membutuhkan review kedua.", action: "Lihat audit sistem", href: "/dashboard/audit" },
 } as const;
 
-type Summary = { user: { id: string; name: string; role: AppRole; displayCode: string }; completionPercent: number };
+type Summary = DashboardSummary;
+
+const activityLabels: Record<string, string> = {
+  "super_admin.seeded": "Super admin dibuat",
+  "super_admin.promoted": "Hak akses super admin diperbarui",
+  "profile.section.saved": "Bagian biodata disimpan",
+  "document.uploaded": "Dokumen verifikasi diunggah",
+  "document.viewed": "Dokumen verifikasi ditinjau",
+};
 
 function PortalLoading() {
   return <section className="portal-overview portal-overview-loading" aria-label="Memuat ringkasan"><div className="skeleton portal-skeleton-kicker" /><div className="skeleton portal-skeleton-title" /><div className="portal-skeleton-layout"><div className="skeleton portal-skeleton-main" /><div className="skeleton portal-skeleton-aside" /></div><p aria-live="polite"><LoaderCircle className="spin" /> Menyiapkan perjalanan Anda…</p></section>;
@@ -102,13 +111,12 @@ export function DashboardOverview() {
   const role = summary.user.role;
   const content = roleContent[role];
   const isParticipant = role.startsWith("participant_");
-  const progress = isParticipant ? summary.completionPercent : 0;
   const name = summary.user.name || authSession?.user.name || "Sahabat";
   if (isParticipant || role === "guardian") return <ParticipantOverview summary={summary} name={name} />;
   return <>
     <section className="dashboard-welcome"><div><p className="mono">{roleLabels[role].toUpperCase()} · {summary.user.displayCode}</p><h1>Assalamu’alaikum, {name}.</h1><p>Berikut keadaan proses dan amanah yang perlu Anda perhatikan hari ini.</p></div><div className="today"><CalendarDays /><span>Hari ini</span><strong>{new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date())}</strong></div></section>
-    <section className="focus-panel"><div className="focus-copy"><span className="status-chip"><Clock3 /> Tindakan berikutnya</span><h2>{content.title}</h2><p>{content.body}</p><Link href={content.href} className="app-primary" prefetch={false}>{content.action} <ArrowUpRight /></Link></div><div className="progress-orbit" style={{ "--progress": `${progress * 3.6}deg` } as React.CSSProperties}><div><strong>{progress}%</strong><span>{isParticipant ? "Kelengkapan" : "Terselesaikan"}</span></div></div></section>
-    <section className="metric-grid"><article><span><FileText /></span><div><small>{isParticipant ? "Bagian biodata" : "Antrean utama"}</small><strong>{isParticipant ? `${Math.round((progress / 100) * 17)} dari 17` : "0"}</strong><p>{isParticipant ? `${17 - Math.round((progress / 100) * 17)} bagian belum lengkap` : "Tidak ada item melewati SLA"}</p></div></article><article><span><HeartHandshake /></span><div><small>Proses aktif</small><strong>{isParticipant ? "Belum ada" : "0 proses"}</strong><p>Satu proses aktif per peserta</p></div></article><article><span><ShieldCheck /></span><div><small>Status verifikasi</small><strong>{isParticipant ? "Perlu dilengkapi" : "Terkendali"}</strong><p>Setiap keputusan tercatat</p></div></article></section>
-    <div className="dashboard-columns"><section className="dashboard-card"><header><div><p className="mono">AKTIVITAS TERBARU</p><h2>Jejak proses</h2></div><Link href="/dashboard/proses" prefetch={false}>Lihat semua</Link></header><div className="timeline-list">{[["Akun berhasil dibuat","Sistem","Tercatat"],["Email telah diverifikasi","Keamanan akun","Selesai"],["Biodata utama","Profil peserta",progress ? `${progress}%` : "Belum selesai"]].map(([title,meta,time], index) => <div key={title}><span className={index < 2 ? "done" : ""}>{index < 2 ? <CheckCircle2 /> : index + 1}</span><div><strong>{title}</strong><p>{meta}</p></div><time>{time}</time></div>)}</div></section><aside className="dashboard-card guidance-card"><p className="mono">HIMBAUAN</p><h2>Jaga tujuan setiap langkah.</h2><p>Platform tidak membuka komunikasi pribadi. Gunakan ruang terarah dan libatkan wali serta mediator sesuai tahap.</p><Link href="/dashboard/panduan" prefetch={false}>Baca adab proses <ArrowUpRight /></Link></aside></div>
+    <section className="focus-panel"><div className="focus-copy"><span className="status-chip"><Clock3 /> Tindakan berikutnya</span><h2>{content.title}</h2><p>{content.body}</p><Link href={content.href} className="app-primary" prefetch={false}>{content.action} <ArrowUpRight /></Link></div><div className="progress-orbit queue-count"><div><strong>{summary.stats.verificationQueue}</strong><span>Dalam antrean</span></div></div></section>
+    <section className="metric-grid"><article><span><FileText /></span><div><small>Antrean verifikasi</small><strong>{summary.stats.verificationQueue}</strong><p>{summary.stats.overdueProcesses > 0 ? `${summary.stats.overdueProcesses} proses melewati tenggat` : "Tidak ada proses melewati tenggat"}</p></div></article><article><span><HeartHandshake /></span><div><small>Proses aktif</small><strong>{summary.stats.activeProcesses}</strong><p>Jumlah berasal dari proses yang belum ditutup</p></div></article><article><span><ShieldCheck /></span><div><small>Laporan terbuka</small><strong>{summary.stats.openCases}</strong><p>{summary.stats.totalParticipants} peserta tercatat sesuai kewenangan</p></div></article></section>
+    <div className="dashboard-columns"><section className="dashboard-card"><header><div><p className="mono">AKTIVITAS TERBARU</p><h2>Jejak proses</h2></div><Link href="/dashboard/audit" prefetch={false}>Lihat audit</Link></header>{summary.recentActivity.length > 0 ? <div className="timeline-list">{summary.recentActivity.map((item) => <div key={item.id}><span className="done"><CheckCircle2 /></span><div><strong>{activityLabels[item.action] ?? item.action}</strong><p>{item.targetType}</p></div><time>{new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(item.createdAt))}</time></div>)}</div> : <div className="empty-queue"><FileText /><h3>Belum ada aktivitas operasional.</h3><p>Jejak nyata akan muncul setelah sistem mencatat tindakan pengguna atau petugas.</p></div>}</section><aside className="dashboard-card guidance-card"><p className="mono">HIMBAUAN</p><h2>Jaga tujuan setiap langkah.</h2><p>Platform tidak membuka komunikasi pribadi. Gunakan ruang terarah dan libatkan wali serta mediator sesuai tahap.</p><Link href="/dashboard/panduan" prefetch={false}>Baca adab proses <ArrowUpRight /></Link></aside></div>
   </>;
 }
