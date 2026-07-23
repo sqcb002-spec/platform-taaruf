@@ -19,7 +19,7 @@ const roleContent = {
 } as const;
 
 type Summary = DashboardSummary;
-const onboardingKeys = ["profile", "education", "self", "experience", "physical", "lifestyle", "emotion", "family", "marriage", "future", "criteria_physical", "criteria_nonphysical", "life_story", "references"];
+const onboardingKeys = ["profile", "physical", "family"];
 
 const activityLabels: Record<string, string> = {
   "super_admin.seeded": "Super admin dibuat",
@@ -39,10 +39,10 @@ function ParticipantOverview({ summary, name, onboardingProgress }: { summary: S
   const progress = onboardingProgress;
   const content = roleContent[role];
   const participantSteps = [
-    { title: "Data diri", detail: "Identitas dan gambaran diri yang penting.", href: "/dashboard/biodata?bagian=profile", done: progress >= 27, current: progress < 27 },
-    { title: "Fisik", detail: "Gambaran fisik dan pola hidup.", href: "/dashboard/biodata?bagian=physical", done: progress >= 47, current: progress >= 27 && progress < 47 },
-    { title: "Keluarga", detail: "Keluarga dan kesiapan pernikahan.", href: "/dashboard/biodata?bagian=family", done: progress >= 100, current: progress >= 47 && progress < 100 },
-    { title: "Pertanyaan lanjutan", detail: "Pemahaman agama dan respons dalam rumah tangga.", href: "/dashboard/pertanyaan-wajib", done: false, current: progress >= 100 },
+    { title: "Data diri", detail: "Identitas dasar yang penting.", href: "/dashboard/biodata?bagian=profile", done: progress >= 34, current: progress < 34 },
+    { title: "Fisik", detail: "Gambaran fisik secukupnya.", href: "/dashboard/biodata?bagian=physical", done: progress >= 67, current: progress >= 34 && progress < 67 },
+    { title: "Keluarga", detail: "Keluarga inti dan informasi penting.", href: "/dashboard/biodata?bagian=family", done: progress >= 100, current: progress >= 67 && progress < 100 },
+    { title: "Pertanyaan lanjutan", detail: "Jawab setelah onboarding selesai.", href: "/dashboard/pertanyaan-wajib", done: false, current: progress >= 100 },
   ];
   const guardianSteps = [
     { title: "Akhwat terhubung", detail: "Pastikan hubungan wali tercatat dan terverifikasi.", href: "/dashboard/amanah", done: false, current: true },
