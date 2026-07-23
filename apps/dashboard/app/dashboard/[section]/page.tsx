@@ -20,6 +20,21 @@ const onboardingGroups = [
   { key: "keluarga", label: "Keluarga", description: "Keluarga inti dan informasi yang berdampak pada pernikahan.", sections: ["family"] },
 ];
 
+const mainBiodataGroups = [
+  { key: "profil", label: "Profil", sections: ["profile"] },
+  { key: "foto", label: "Foto", sections: ["identity"] },
+  { key: "fisik", label: "Gambaran fisik", sections: ["physical"] },
+  { key: "diri", label: "Gambaran diri", sections: ["self", "emotion", "life_story", "partner_questions", "references"] },
+  { key: "keluarga", label: "Gambaran keluarga", sections: ["family"] },
+  { key: "pendidikan", label: "Pendidikan", sections: ["education"] },
+  { key: "pengalaman", label: "Pengalaman", sections: ["experience"] },
+  { key: "ibadah", label: "Ibadah", sections: ["religion", "lifestyle"] },
+  { key: "persiapan", label: "Persiapan pernikahan", sections: ["marriage"] },
+  { key: "harapan", label: "Harapan", sections: ["future"] },
+  { key: "kriteria-fisik", label: "Kriteria fisik", sections: ["criteria_physical"] },
+  { key: "kriteria-nonfisik", label: "Kriteria non fisik", sections: ["criteria_nonphysical"] },
+];
+
 function PrivacyNote() {
   return <div className="sensitive-note"><ShieldCheck /><div><strong>Visibilitas data dijaga bertahap</strong><p>Nama lengkap, kontak, dokumen identitas, dan jawaban sensitif hanya dipakai sesuai kewenangan dan tidak ditampilkan otomatis kepada kandidat.</p></div></div>;
 }
@@ -348,6 +363,7 @@ export default function DashboardSectionPage() {
   const definition = profileFormSections.find((item) => item.key === selectedKey) ?? profileFormSections.find((item) => item.key === activeGroup.sections[0])!;
   const onboardingSections = onboardingGroups.flatMap((group) => group.sections);
   const onboardingCompleted = new Set(onboardingSections.filter((key) => completed.has(key)));
+  const mainCompleted = new Set(mainBiodataGroups.filter((group) => group.sections.every((key) => completed.has(key))).map((group) => group.key));
   const percent = Math.round((onboardingCompleted.size / onboardingSections.length) * 100);
 
   if (section === "konfigurasi" && user) return <><header className="module-heading"><div><p className="mono">KONFIGURASI SISTEM</p><h1>Atur avatar default peserta.</h1><p>Hanya admin yang dapat mengganti avatar fallback ikhwan dan akhwat.</p></div></header><AdminAvatarSettings role={user.role} /></>;
@@ -356,6 +372,6 @@ export default function DashboardSectionPage() {
   return <>
     {section === "biodata" ? <OnboardingProgress activeGroup={activeGroup} completed={completed} percent={percent} selectedKey={selectedKey} /> : null}
     {section !== "biodata" ? <header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}><FileText /> Lihat panduan</Link></header> : null}
-    {section !== "biodata" ? section === "peserta" ? <ParticipantDirectory /> : section === "panduan" ? <ParticipantGuide /> : section === "pengaturan" ? <ParticipantSettings user={user} /> : <QueueModule section={section} /> : loading ? <section className="dashboard-loading"><div className="skeleton skeleton-panel" /><p><LoaderCircle className="spin" /> Memuat progres biodata…</p></section> : error ? <section className="dashboard-error"><ShieldCheck /><h2>Progres biodata belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section> : <div className="biodata-layout"><aside className="section-progress"><div><strong>{percent}%</strong><span>{completed.size} dari {profileFormSections.length} bagian</span></div>{profileFormSections.map((item, index) => <Link key={item.key} href={`/dashboard/biodata?bagian=${item.key}`} prefetch={false} className={`${item.key === definition.key ? "current" : ""} ${completed.has(item.key) ? "complete" : ""}`}><span>{completed.has(item.key) ? <Check /> : index + 1}</span>{item.label}<ChevronRight /></Link>)}</aside><section className="form-card"><header><div><p className="mono">BAGIAN {String(profileFormSections.indexOf(definition) + 1).padStart(2, "0")}</p><h2>{definition.label}</h2><p>{definition.description}</p></div><span className="autosave"><span /> Data privat</span></header>{user ? <ProfileForm sectionKey={definition.key} role={user.role} onSaved={() => setReload((value) => value + 1)} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section></div>}
+    {section !== "biodata" ? section === "peserta" ? <ParticipantDirectory /> : section === "panduan" ? <ParticipantGuide /> : section === "pengaturan" ? <ParticipantSettings user={user} /> : <QueueModule section={section} /> : loading ? <section className="dashboard-loading"><div className="skeleton skeleton-panel" /><p><LoaderCircle className="spin" /> Memuat progres biodata…</p></section> : error ? <section className="dashboard-error"><ShieldCheck /><h2>Progres biodata belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section> : <div className="biodata-layout"><aside className="section-progress"><div><strong>{percent}%</strong><span>{mainCompleted.size} dari {mainBiodataGroups.length} bagian</span></div>{mainBiodataGroups.map((group, index) => { const current = group.sections.includes(definition.key); const done = mainCompleted.has(group.key); const target = group.sections[0]; return <Link key={group.key} href={`/dashboard/biodata?bagian=${target}`} prefetch={false} className={`${current ? "current" : ""} ${done ? "complete" : ""}`}><span>{done ? <Check /> : index + 1}</span>{group.label}<ChevronRight /></Link>; })}</aside><section className="form-card"><header><div><p className="mono">BAGIAN {String(mainBiodataGroups.findIndex((group) => group.sections.includes(definition.key) ) + 1).padStart(2, "0")}</p><h2>{definition.label}</h2><p>{definition.description}</p></div><span className="autosave"><span /> Data privat</span></header>{user ? <ProfileForm sectionKey={definition.key} role={user.role} onSaved={() => setReload((value) => value + 1)} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section></div>}
   </>;
 }
