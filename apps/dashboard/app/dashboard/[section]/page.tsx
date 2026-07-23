@@ -45,25 +45,31 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
 
   if (definition.key === "identity") return <div className="profile-form"><div className="upload-grid"><DocumentUpload kind="identity_card" label="Foto KTP bagian depan" /><DocumentUpload kind="identity_selfie" label="Foto verifikasi diri bersama KTP" /><DocumentUpload kind="profile_photo" label="Foto peserta untuk verifikasi" /></div><PrivacyNote /></div>;
 
-  const coreFields = [
-    { name: "fullName", label: "Nama lengkap sesuai KTP" },
-    { name: "birthDate", label: "Tanggal lahir", type: "date" },
-    { name: "maritalStatus", label: "Status pernikahan" },
-    { name: "province", label: "Provinsi" },
-    { name: "city", label: "Kota/kabupaten" },
-    { name: "manhaj", label: "Manhaj" },
-    { name: "ethnicity", label: "Suku" },
-    { name: "heightCm", label: "Tinggi badan (cm)", type: "number" },
-    { name: "weightKg", label: "Berat badan (kg)", type: "number" },
-    { name: "occupation", label: "Tempat dan bidang pekerjaan", type: "textarea" },
+  const coreFields: Array<{ name: string; label: string; type?: "text" | "textarea" | "number" | "date" | "select"; options?: string[]; placeholder?: string }> = [
+    { name: "fullName", label: "Nama lengkap sesuai KTP" }, { name: "birthDate", label: "Tanggal lahir", type: "date" }, { name: "phone", label: "No. HP/WhatsApp", placeholder: "Contoh: 6281234567890" },
+    { name: "province", label: "Provinsi" }, { name: "city", label: "Kota/kabupaten" }, { name: "district", label: "Kecamatan" }, { name: "village", label: "Kelurahan/desa" },
+    { name: "maritalStatus", label: "Status pernikahan", type: "select", options: ["Lajang", "Duda", "Janda"] }, { name: "occupation", label: "Pekerjaan", placeholder: "Contoh: Software Engineer" },
+    { name: "salaryRange", label: "Gaji per bulan", type: "select", options: ["Di bawah Rp3 juta", "Rp3–5 juta", "Rp5–7 juta", "Rp7–10 juta", "Di atas Rp10 juta"] }, { name: "educationLevel", label: "Pendidikan terakhir", type: "select", options: ["SMP", "SMA/SMK", "Diploma", "Sarjana", "Pascasarjana"] },
+    { name: "quranReading", label: "Kemampuan baca Al-Qur’an", type: "select", options: ["Belum lancar", "Cukup", "Fasih"] }, { name: "quranMemorization", label: "Hafalan Al-Qur’an", type: "select", options: ["Belum ada", "Juz 30", "1–3 juz", "4–7 juz", "8–10 juz", "Lebih dari 10 juz"] },
+    { name: "prayer", label: "Shalat wajib", type: "select", options: ["Menjaga 5 waktu", "Kadang terlewat", "Sedang memperbaiki"] }, { name: "studyFrequency", label: "Kajian per minggu", type: "select", options: ["Belum rutin", "1 kali", "2–3 kali", "Lebih dari 3 kali"] },
+    { name: "music", label: "Preferensi musik", type: "select", options: ["Tidak", "Ya, sesekali", "Ya, rutin"] }, { name: "smoking", label: "Merokok", type: "select", options: ["Tidak", "Ya"] }, { name: "widowMarriage", label: "Bersedia menikah dengan duda/janda", type: "select", options: ["Ya", "Tidak", "Akan dibahas bersama keluarga"] },
   ];
   const fields = definition.key === "profile" ? coreFields : definition.fields;
+  const fieldGroups = definition.key === "profile" ? [
+    { title: "Informasi dasar", fields: fields.slice(0, 8) },
+    { title: "Pekerjaan & pendidikan", fields: fields.slice(8, 11) },
+    { title: "Informasi keagamaan", fields: fields.slice(11, 15) },
+    { title: "Preferensi pribadi", fields: fields.slice(15) },
+  ].filter((group) => group.fields.length > 0) : [{ title: "", fields }];
   const placeholders: Record<string, string> = {
     fullName: "Contoh: Ahmad Fauzan",
     birthDate: "Pilih tanggal lahir",
+    phone: "Contoh: 6281234567890",
     maritalStatus: "Contoh: Belum menikah",
     province: "Contoh: Jawa Barat",
     city: "Contoh: Kota Bandung",
+    district: "Contoh: Kecamatan Coblong",
+    village: "Contoh: Kelurahan Dago",
     manhaj: "Contoh: Ahlus Sunnah wal Jamaah",
     ethnicity: "Contoh: Sunda",
     heightCm: "Contoh: 170",
@@ -79,7 +85,7 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
 
   return <form className="profile-form" onSubmit={submit}>
     {definition.key === "profile" ? <input type="hidden" name="gender" value={role === "participant_female" ? "Akhwat" : "Ikhwan"} /> : null}
-    <div className="field-grid">{fields.map((field) => { const id = `${definition.key}-${field.name}`; const placeholder = placeholderFor(field.name, field.type); return <label key={field.name} htmlFor={id}><span>{field.label} <em>*</em></span>{field.type === "textarea" ? <textarea id={id} name={field.name} rows={4} required placeholder={placeholder} aria-describedby={`${id}-hint`} /> : <input id={id} name={field.name} type={field.type ?? "text"} min={field.name === "heightCm" ? 120 : field.name === "weightKg" ? 30 : undefined} max={field.name === "heightCm" ? 230 : field.name === "weightKg" ? 250 : undefined} required placeholder={placeholder} aria-describedby={`${id}-hint`} />}<small id={`${id}-hint`}>Wajib diisi agar tahap ini bisa disimpan.</small></label>; })}</div>
+    <div className="profile-field-groups">{fieldGroups.map((group) => <section className="profile-field-group" key={group.title || definition.key}>{group.title ? <h3>{group.title}</h3> : null}<div className="field-grid">{group.fields.map((field) => { const id = `${definition.key}-${field.name}`; const placeholder = ("placeholder" in field ? field.placeholder : undefined) ?? placeholderFor(field.name, field.type); return <label key={field.name} htmlFor={id}><span>{field.label} <em>*</em></span>{field.type === "textarea" ? <textarea id={id} name={field.name} rows={4} required placeholder={placeholder} aria-describedby={`${id}-hint`} /> : field.type === "select" ? <select id={id} name={field.name} required defaultValue=""><option value="" disabled>{placeholder}</option>{field.options?.map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input id={id} name={field.name} type={field.type ?? "text"} min={field.name === "heightCm" ? 120 : field.name === "weightKg" ? 30 : undefined} max={field.name === "heightCm" ? 230 : field.name === "weightKg" ? 250 : undefined} required placeholder={placeholder} aria-describedby={`${id}-hint`} />}<small id={`${id}-hint`}>Wajib diisi agar tahap ini bisa disimpan.</small></label>; })}</div></section>)}</div>
     <PrivacyNote />
     {message ? <p className="form-error" role="alert">{message}</p> : null}
     {state === "saved" ? <p className="form-success">Bagian tersimpan dan progres telah diperbarui.</p> : null}

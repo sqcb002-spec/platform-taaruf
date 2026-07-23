@@ -33,6 +33,8 @@ export const profileFormSections: ProfileSectionDefinition[] = [
     description:
       "Gambaran fisik yang relevan untuk proses, tanpa foto terbuka.",
     fields: [
+      { name: "heightCm", label: "Tinggi badan (cm)", type: "number" },
+      { name: "weightKg", label: "Berat badan (kg)", type: "number" },
       { name: "skinTone", label: "Deskripsi warna kulit" },
       { name: "appearance", label: "Gambaran penampilan", type: "textarea" },
       { name: "veil", label: "Menggunakan cadar / ketentuan berpakaian" },
