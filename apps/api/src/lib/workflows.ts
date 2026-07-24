@@ -32,7 +32,12 @@ export async function createProposal(
 ) {
   return db.transaction(async (tx) => {
     const participantRows = await tx
-      .select({ id: users.id, role: users.role, status: users.status })
+      .select({
+        id: users.id,
+        role: users.role,
+        status: users.status,
+        displayCode: users.displayCode,
+      })
       .from(users)
       .where(inArray(users.id, [actorId, candidateId]));
     if (participantRows.length !== 2) throw new Error("PARTICIPANT_NOT_FOUND");
@@ -44,6 +49,9 @@ export async function createProposal(
       actor.role === candidate.role
     )
       throw new Error("INELIGIBLE_PAIR");
+    const actorIsTest = actor.displayCode.startsWith("TEST-");
+    const candidateIsTest = candidate.displayCode.startsWith("TEST-");
+    if (actorIsTest !== candidateIsTest) throw new Error("TEST_ACCOUNT_ISOLATED");
     if (
       actor.status !== "active_search" ||
       candidate.status !== "active_search"

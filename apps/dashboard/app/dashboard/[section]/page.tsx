@@ -417,7 +417,7 @@ function ParticipantDirectory() {
     {loading ? <div className="dashboard-loading"><div className="skeleton skeleton-panel" /><p><LoaderCircle className="spin" /> Memuat peserta…</p></div> : error ? <div className="dashboard-error"><ShieldCheck /><h2>Data peserta belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></div> : <div className="data-table">
       <div className="data-row data-head"><span>Peserta</span><span>Status</span><span>Kelengkapan</span><span>Bergabung</span><span /></div>
       {result && result.items.length > 0 ? result.items.map((participant) => <div className="data-row" key={participant.id}>
-        <span><strong>{participant.displayCode}</strong><small>{participant.name}{participant.email ? ` · ${participant.email}` : ""}</small></span>
+        <span><strong>{participant.displayCode}{participant.displayCode.startsWith("TEST-") ? <em className="test-data-badge">DATA TEST</em> : null}</strong><small>{participant.name}{participant.email ? ` · ${participant.email}` : ""}</small></span>
         <span><em className={participant.status === "profile_incomplete" ? "status-warn" : "status-neutral"}>{participantStatusLabels[participant.status] ?? participant.status}</em></span>
         <span><strong>{participant.completionPercent}%</strong><small>{roleLabels[participant.role]} · email {participant.emailVerified ? "terverifikasi" : "belum terverifikasi"}</small></span>
         <span><CalendarDays /> {new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(participant.createdAt))}</span>
