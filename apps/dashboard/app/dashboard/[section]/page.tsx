@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, BellRing, BookOpen, BriefcaseBusiness, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, EyeOff, FileText, Filter, GraduationCap, HeartHandshake, Hourglass, LoaderCircle, LockKeyhole, LogOut, MapPin, RefreshCw, Search, Send, ShieldCheck, Sparkles, UserRoundCheck, X } from "lucide-react";
+import { ArrowRight, BellRing, BookOpen, BriefcaseBusiness, CalendarDays, Check, CheckCheck, ChevronLeft, ChevronRight, Clock3, EyeOff, FileText, Filter, GraduationCap, HeartHandshake, Hourglass, Inbox, LoaderCircle, LockKeyhole, LogOut, MapPin, RefreshCw, Search, Send, ShieldCheck, Sparkles, UserRoundCheck, X } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { apiFetch, apiUrl } from "@/lib/api-client";
 import { navForRole, sectionCopy } from "@/lib/dashboard-config";
@@ -534,7 +534,7 @@ function ProcessModule({ role }: { role: AppRole }) {
       setMessage(kind === "withdraw" ? "Proses telah ditutup dengan baik." : "Keputusan berhasil dicatat.");
       setConfirmReject(null);
       setReload((value) => value + 1);
-      window.dispatchEvent(new Event("dashboard:profile-updated"));
+      window.dispatchEvent(new Event("taaruf:profile-updated"));
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "Tindakan belum dapat diproses.");
     } finally {
@@ -611,6 +611,123 @@ function ProcessModule({ role }: { role: AppRole }) {
     </div> : <div className="process-empty"><HeartHandshake /><h3>{isGuardian ? "Belum ada permintaan persetujuan." : "Belum ada proses yang berjalan."}</h3><p>{isGuardian ? "Permintaan akan muncul setelah akhwat menyatakan tertarik kepada calon tertentu." : "Pengajuan yang Anda kirim atau terima akan langsung muncul di halaman ini."}</p>{!isGuardian ? <Link className="app-primary" href="/dashboard/rekomendasi" prefetch={false}>Lihat rekomendasi</Link> : null}</div>}
 
     {history.length > 0 ? <details className="process-history"><summary><span><Clock3 /><strong>Riwayat proses</strong></span><small>{history.length} tersimpan</small></summary><div>{history.map((item) => <article key={item.id}><div><strong>{item.counterpart?.displayCode || "Kode peserta"}</strong><small>{processCopy[item.status]?.label || item.status}</small></div><span>{formatProcessDate(item.updatedAt)}</span></article>)}</div></details> : null}
+  </section>;
+}
+
+type AppNotification = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  href: string | null;
+  readAt: string | null;
+  createdAt: string;
+};
+
+function notificationTime(value: string) {
+  const diff = Date.now() - new Date(value).getTime();
+  const minutes = Math.max(0, Math.floor(diff / 60000));
+  if (minutes < 1) return "Baru saja";
+  if (minutes < 60) return `${minutes} menit lalu`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} jam lalu`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} hari lalu`;
+  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+function NotificationModule() {
+  const router = useRouter();
+  const [items, setItems] = useState<AppNotification[]>([]);
+  const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [busy, setBusy] = useState("");
+  const [reload, setReload] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    apiFetch<AppNotification[]>("/api/notifications", { signal: controller.signal })
+      .then(setItems)
+      .catch((reason) => { if (reason?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "Notifikasi belum dapat dimuat."); })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [reload]);
+
+  const unreadCount = items.filter((item) => !item.readAt).length;
+  const visibleItems = filter === "unread" ? items.filter((item) => !item.readAt) : items;
+  const refreshSummary = () => window.dispatchEvent(new Event("taaruf:profile-updated"));
+
+  const markRead = async (item: AppNotification) => {
+    if (item.readAt) return true;
+    setBusy(item.id);
+    setActionError("");
+    try {
+      await apiFetch(`/api/notifications/${item.id}/read`, { method: "PATCH" });
+      setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, readAt: new Date().toISOString() } : entry));
+      refreshSummary();
+      return true;
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : "Status baca belum dapat diperbarui.");
+      return false;
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const openNotification = async (item: AppNotification) => {
+    const marked = await markRead(item);
+    if (marked) {
+      const href = item.href?.startsWith("/dashboard") ? item.href : "/dashboard";
+      router.push(href);
+    }
+  };
+
+  const markAll = async () => {
+    if (unreadCount === 0) return;
+    setBusy("all");
+    setActionError("");
+    try {
+      await apiFetch("/api/notifications/read-all", { method: "PATCH" });
+      const now = new Date().toISOString();
+      setItems((current) => current.map((item) => ({ ...item, readAt: item.readAt || now })));
+      refreshSummary();
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : "Notifikasi belum dapat ditandai.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  if (loading) return <section className="notification-loading"><div className="skeleton notification-skeleton-head" />{[1, 2, 3].map((item) => <div className="skeleton notification-skeleton-row" key={item} />)}<p><LoaderCircle className="spin" /> Memuat kabar terbaru…</p></section>;
+  if (error) return <section className="dashboard-error"><BellRing /><h2>Notifikasi belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section>;
+
+  return <section className="notification-space">
+    <header className="notification-head">
+      <div><p className="mono">KABAR TERBARU</p><h2>{unreadCount > 0 ? `${unreadCount} belum dibaca.` : "Semua sudah dibaca."}</h2></div>
+      {unreadCount > 0 ? <button onClick={markAll} disabled={busy === "all"}>{busy === "all" ? <LoaderCircle className="spin" /> : <CheckCheck />} Tandai semua dibaca</button> : null}
+    </header>
+    <div className="notification-tabs" role="tablist" aria-label="Filter notifikasi">
+      <button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")} role="tab" aria-selected={filter === "all"}>Semua <span>{items.length}</span></button>
+      <button className={filter === "unread" ? "active" : ""} onClick={() => setFilter("unread")} role="tab" aria-selected={filter === "unread"}>Belum dibaca {unreadCount > 0 ? <span>{unreadCount}</span> : null}</button>
+    </div>
+    {actionError ? <p className="notification-error" role="alert">{actionError}</p> : null}
+    {visibleItems.length > 0 ? <div className="notification-list">
+      {visibleItems.map((item, index) => {
+        const isProcess = item.type.includes("proposal") || item.type.includes("guardian") || item.type.includes("process");
+        return <article className={`notification-item ${item.readAt ? "is-read" : "is-unread"}`} style={{ "--notification-delay": `${Math.min(index, 8) * 45}ms` } as React.CSSProperties} key={item.id}>
+          <button className="notification-open" onClick={() => openNotification(item)}>
+            <span className="notification-icon">{isProcess ? <HeartHandshake /> : <BellRing />}</span>
+            <span className="notification-copy"><span><strong>{item.title}</strong>{!item.readAt ? <i>Baru</i> : null}</span><small>{item.body}</small><time dateTime={item.createdAt}><Clock3 /> {notificationTime(item.createdAt)}</time></span>
+            <ArrowRight className="notification-arrow" />
+          </button>
+          {!item.readAt ? <button className="notification-read" onClick={() => markRead(item)} disabled={busy === item.id} aria-label={`Tandai "${item.title}" sudah dibaca`}>{busy === item.id ? <LoaderCircle className="spin" /> : <Check />}</button> : null}
+        </article>;
+      })}
+    </div> : <div className="notification-empty"><Inbox /><h3>{filter === "unread" ? "Tidak ada yang tertinggal." : "Belum ada notifikasi."}</h3><p>{filter === "unread" ? "Semua kabar sudah dibaca." : "Kabar penting tentang profil dan proses ta’aruf akan muncul di sini."}</p>{filter === "unread" ? <button onClick={() => setFilter("all")}>Lihat semua</button> : null}</div>}
   </section>;
 }
 
@@ -844,7 +961,7 @@ export default function DashboardSectionPage() {
 
   return <>
     {section === "biodata" && !baseComplete ? <OnboardingProgress activeGroup={activeGroup} completed={completed} percent={percent} /> : null}
-    {section !== "biodata" && section !== "rekomendasi" && section !== "proses" && section !== "persetujuan" ? <header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}><FileText /> Lihat panduan</Link></header> : null}
-    {section !== "biodata" ? section === "peserta" ? <ParticipantDirectory /> : section === "rekomendasi" && user?.role.startsWith("participant_") ? <RecommendationModule /> : section === "proses" && user?.role.startsWith("participant_") ? <ProcessModule role={user.role} /> : section === "persetujuan" && user?.role === "guardian" ? <ProcessModule role={user.role} /> : section === "panduan" ? <ParticipantGuide /> : section === "pengaturan" ? <ParticipantSettings user={user} /> : <QueueModule section={section} /> : loading ? <section className="dashboard-loading"><div className="skeleton skeleton-panel" /><p><LoaderCircle className="spin" /> Memuat progres biodata…</p></section> : error ? <section className="dashboard-error"><ShieldCheck /><h2>Progres biodata belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section> : showBiodataHub ? <BiodataHub completed={completed} /> : <div className="biodata-layout"><aside className="section-progress"><div><strong>{percent}%</strong><span>{completed.size} bagian tersimpan</span></div></aside><section className="form-card"><header><div><p className="mono">{baseComplete ? "EDIT BIODATA" : `LANGKAH ${onboardingGroups.findIndex((group) => group.sections.includes(definition.key)) + 1}`}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header>{user ? <ProfileForm sectionKey={definition.key} role={user.role} onSaved={() => setReload((value) => value + 1)} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section></div>}
+    {section !== "biodata" && section !== "rekomendasi" && section !== "proses" && section !== "persetujuan" && section !== "notifikasi" ? <header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}><FileText /> Lihat panduan</Link></header> : null}
+    {section !== "biodata" ? section === "peserta" ? <ParticipantDirectory /> : section === "rekomendasi" && user?.role.startsWith("participant_") ? <RecommendationModule /> : section === "proses" && user?.role.startsWith("participant_") ? <ProcessModule role={user.role} /> : section === "persetujuan" && user?.role === "guardian" ? <ProcessModule role={user.role} /> : section === "notifikasi" ? <NotificationModule /> : section === "panduan" ? <ParticipantGuide /> : section === "pengaturan" ? <ParticipantSettings user={user} /> : <QueueModule section={section} /> : loading ? <section className="dashboard-loading"><div className="skeleton skeleton-panel" /><p><LoaderCircle className="spin" /> Memuat progres biodata…</p></section> : error ? <section className="dashboard-error"><ShieldCheck /><h2>Progres biodata belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section> : showBiodataHub ? <BiodataHub completed={completed} /> : <div className="biodata-layout"><aside className="section-progress"><div><strong>{percent}%</strong><span>{completed.size} bagian tersimpan</span></div></aside><section className="form-card"><header><div><p className="mono">{baseComplete ? "EDIT BIODATA" : `LANGKAH ${onboardingGroups.findIndex((group) => group.sections.includes(definition.key)) + 1}`}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header>{user ? <ProfileForm sectionKey={definition.key} role={user.role} onSaved={() => setReload((value) => value + 1)} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section></div>}
   </>;
 }

@@ -130,7 +130,7 @@ export async function createProposal(
         type: "proposal.received",
         title: "Pengajuan ta’aruf baru",
         body: "Tinjau biodata terbatas dan berikan keputusan dalam tiga hari.",
-        href: `/dashboard/pengajuan/${process.id}`,
+        href: "/dashboard/proses",
       });
     await tx
       .insert(auditLogs)

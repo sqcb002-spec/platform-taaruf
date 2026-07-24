@@ -693,6 +693,53 @@ app.post("/api/processes/:id/withdraw", asyncRoute(async (req, res) => {
   }
 }));
 
+app.get("/api/notifications", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  const rows = await db
+    .select({
+      id: notifications.id,
+      type: notifications.type,
+      title: notifications.title,
+      body: notifications.body,
+      href: notifications.href,
+      readAt: notifications.readAt,
+      createdAt: notifications.createdAt,
+    })
+    .from(notifications)
+    .where(eq(notifications.userId, session.user.id))
+    .orderBy(desc(notifications.createdAt))
+    .limit(50);
+  res.json({ data: rows.map((row) => ({
+    ...row,
+    href: row.href?.startsWith("/dashboard/pengajuan/") ? "/dashboard/proses" : row.href,
+  })) });
+}));
+
+app.patch("/api/notifications/read-all", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  await db
+    .update(notifications)
+    .set({ readAt: new Date() })
+    .where(and(eq(notifications.userId, session.user.id), isNull(notifications.readAt)));
+  res.json({ data: { success: true } });
+}));
+
+app.patch("/api/notifications/:id/read", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  const notificationId = String(req.params.id);
+  if (!z.string().uuid().safeParse(notificationId).success) {
+    return void res.status(400).json({ error: { code: "INVALID_NOTIFICATION", message: "Notifikasi tidak valid." } });
+  }
+  await db
+    .update(notifications)
+    .set({ readAt: new Date() })
+    .where(and(eq(notifications.id, notificationId), eq(notifications.userId, session.user.id)));
+  res.json({ data: { success: true } });
+}));
+
 function resolveProfileSectionStatuses(rows: Array<{ key: string; status: string; answers: unknown; encryptedAnswers: string | null }>, role: string) {
   return rows.map((row) => {
     const definition = profileFormSections.find((item) => item.key === row.key);
