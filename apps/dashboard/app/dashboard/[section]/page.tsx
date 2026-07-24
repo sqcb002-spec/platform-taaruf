@@ -329,7 +329,7 @@ function RecommendationModule() {
           <span><small>Target menikah</small><strong>{selected.candidate.marriageTarget}</strong></span>
         </div>
         <div className="match-dialog-reasons"><h3>Alasan kecocokan awal</h3>{selected.reasons.map((reason) => <span key={reason}><Check /> {reason}</span>)}</div>
-        <footer><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}>Baca alur pengajuan</Link><button className="app-primary" onClick={() => setSelected(null)}>Simpan untuk dipertimbangkan</button></footer>
+        <footer><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}>Baca alur pengajuan</Link><button className="app-primary" onClick={() => setSelected(null)}>Selesai meninjau</button></footer>
       </section>
     </div> : null}
   </section>;
