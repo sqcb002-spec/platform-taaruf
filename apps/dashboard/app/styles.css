@@ -218,7 +218,12 @@ h3 {
   padding: var(--space-sm) var(--space-lg);
   border: 0;
   border-radius: var(--radius-pill);
-  background: var(--color-accent);
+  background: linear-gradient(
+    135deg,
+    var(--color-accent-deep) 0%,
+    var(--color-accent) 68%,
+    color-mix(in srgb, var(--color-accent) 82%, white) 100%
+  );
   color: var(--color-accent-ink);
   font-weight: 700;
   white-space: nowrap;
@@ -233,6 +238,7 @@ h3 {
 }
 .btn:hover {
   transform: translateY(-2px);
+  filter: saturate(1.06) brightness(1.025);
   box-shadow:
     0 6px 0 var(--btn-edge),
     0 13px 24px -7px color-mix(in oklch, var(--color-accent) 55%, transparent);
