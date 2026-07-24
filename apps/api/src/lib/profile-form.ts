@@ -38,11 +38,10 @@ export const profileFormSections: ProfileSectionDefinition[] = [
     fields: [
       { name: "heightCm", label: "Tinggi badan (cm)", type: "number" },
       { name: "weightKg", label: "Berat badan (kg)", type: "number" },
-      { name: "bodyShape", label: "Bentuk fisik", type: "select", options: ["Sangat kurus", "Kurus", "Atletis", "Normal", "Berisi", "Gemuk"] },
+      { name: "bodyShape", label: "Bentuk fisik", type: "select", options: ["Kurus", "Normal", "Gemuk"] },
       { name: "skinTone", label: "Warna kulit", type: "select", options: ["Putih", "Kuning langsat", "Sawo matang", "Cokelat", "Gelap"] },
       { name: "hairType", label: "Tipe rambut", type: "select", options: ["Lurus", "Bergelombang", "Ikal", "Keriting", "Botak"] },
       { name: "hairColor", label: "Warna rambut", type: "select", options: ["Hitam", "Cokelat", "Kemerahan", "Lainnya"], required: false },
-      { name: "eyeColor", label: "Warna mata", type: "select", options: ["Hitam", "Cokelat", "Biru", "Hijau", "Lainnya"], required: false },
       { name: "favoriteSport", label: "Olahraga yang digemari", placeholder: "Contoh: Jalan kaki, renang, atau futsal", required: false },
       { name: "distinctiveFeatures", label: "Ciri khas", type: "textarea", placeholder: "Kosongkan jika tidak ada", required: false },
       { name: "physicalDisability", label: "Cacat fisik", type: "textarea", required: false },

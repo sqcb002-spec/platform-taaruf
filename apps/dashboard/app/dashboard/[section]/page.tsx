@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, BellRing, BookOpen, CalendarDays, Check, ChevronRight, EyeOff, FileText, Filter, LoaderCircle, LockKeyhole, LogOut, RefreshCw, Search, ShieldCheck, UserRoundCheck } from "lucide-react";
+import { ArrowRight, BellRing, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, EyeOff, FileText, Filter, LoaderCircle, LockKeyhole, LogOut, RefreshCw, Search, ShieldCheck, UserRoundCheck } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { apiFetch, apiUrl } from "@/lib/api-client";
 import { navForRole, sectionCopy } from "@/lib/dashboard-config";
@@ -73,6 +73,9 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
   useEffect(() => {
     if (definition.key === "identity") return;
     const controller = new AbortController();
+    setInitialValues({});
+    setState("idle");
+    setMessage("");
     apiFetch<Record<string, unknown>>(definition.key === "profile" ? "/api/profile/core" : `/api/profile/sections/${definition.key}`, { signal: controller.signal }).then((data) => {
       setInitialValues(data);
       if (definition.key === "profile") setLocationValues({ province: String(data.province ?? ""), city: String(data.city ?? ""), district: String(data.district ?? ""), village: String(data.village ?? "") });
@@ -116,7 +119,7 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
     { name: "fullName", label: "Nama lengkap sesuai KTP" }, { name: "birthDate", label: "Tanggal lahir", type: "date" }, { name: "birthPlace", label: "Tempat lahir", placeholder: "Contoh: Jakarta" }, { name: "phone", label: "No. HP/WhatsApp", placeholder: "Contoh: 6281234567890" },
     { name: "province", label: "Provinsi", type: "select" }, { name: "city", label: "Kota/kabupaten", type: "select" }, { name: "district", label: "Kecamatan", type: "select" }, { name: "village", label: "Kelurahan/desa", type: "select" },
     { name: "originCity", label: "Kota asal", placeholder: "Contoh: Jakarta" }, { name: "maritalStatus", label: "Status pernikahan", type: "select", options: role === "participant_female" ? ["Lajang", "Janda cerai hidup", "Janda cerai mati"] : ["Lajang", "Duda cerai hidup", "Duda cerai mati"] }, { name: "marriageForm", label: "Bentuk pernikahan yang diharapkan", type: "select", options: role === "participant_female" ? ["Monogami / satu pasangan", "Bersedia dipoligami dengan syarat", "Perlu dibahas bersama wali"] : ["Monogami / satu pasangan", "Poligami sesuai kemampuan dan ketentuan", "Belum menentukan"] }, { name: "manhaj", label: "Manhaj", placeholder: "Contoh: Salaf / jelaskan dengan ringkas" }, { name: "ethnicity", label: "Suku", placeholder: "Contoh: Betawi" }, { name: "occupation", label: "Pekerjaan", placeholder: "Contoh: Software Engineer" },
-    { name: "salaryRange", label: "Gaji per bulan", type: "select", options: ["Di bawah Rp3 juta", "Rp3–5 juta", "Rp5–7 juta", "Rp7–10 juta", "Di atas Rp10 juta"] }, { name: "educationLevel", label: "Pendidikan terakhir", type: "select", options: ["SMP", "SMA/SMK", "Diploma", "Sarjana", "Pascasarjana"] },
+    { name: "salaryRange", label: "Gaji per bulan", type: "select", options: ["Akan disampaikan saat proses ta’aruf", "Di bawah Rp3 juta", "Rp3–5 juta", "Rp5–7 juta", "Rp7–10 juta", "Di atas Rp10 juta"] }, { name: "educationLevel", label: "Pendidikan terakhir", type: "select", options: ["SMP", "SMA/SMK", "Diploma", "Sarjana", "Pascasarjana"] },
     { name: "quranReading", label: "Kemampuan baca Al-Qur’an", type: "select", options: ["Belum lancar", "Cukup", "Fasih"] }, { name: "quranMemorization", label: "Hafalan Al-Qur’an", type: "select", options: ["Belum ada", "Juz 30", "1–3 juz", "4–7 juz", "8–10 juz", "Lebih dari 10 juz"] },
     { name: "prayer", label: "Shalat wajib", type: "select", options: ["Menjaga 5 waktu", "Kadang terlewat", "Sedang memperbaiki"] }, { name: "studyFrequency", label: "Kajian per minggu", type: "select", options: ["Belum rutin", "1 kali", "2–3 kali", "Lebih dari 3 kali"] },
     { name: "music", label: "Preferensi musik", type: "select", options: ["Tidak", "Ya, sesekali", "Ya, rutin"] }, { name: "smoking", label: "Merokok", type: "select", options: ["Tidak", "Ya"] }, { name: "widowMarriage", label: "Bersedia menikah dengan duda/janda", type: "select", options: ["Ya", "Tidak", "Akan dibahas bersama keluarga"] },
@@ -176,11 +179,12 @@ function QueueModule({ section }: { section: string }) {
   return <section className="queue-card"><div className="queue-tools"><div className="queue-search"><Search /><input placeholder="Cari kode atau status…" /></div><button><Filter /> Filter</button></div><div className="data-table"><div className="data-row data-head"><span>Kode / proses</span><span>Status</span><span>Informasi utama</span><span>Tenggat</span><span /></div><div className="empty-queue"><Search /><h3>Belum ada data pada ruang ini.</h3><p>{section === "rekomendasi" ? "Rekomendasi muncul setelah seluruh biodata dan verifikasi disetujui." : "Item baru akan muncul otomatis ketika membutuhkan tindakan Anda."}</p></div></div></section>;
 }
 
-const requiredQuestionKeys = ["self", "education", "experience", "religion", "marriage", "future", "criteria_physical", "criteria_nonphysical", "emotion", "lifestyle", "life_story", "partner_questions", "references"] as const;
+const requiredQuestionKeys = ["self", "emotion", "lifestyle", "life_story", "education", "experience", "religion", "marriage", "future", "partner_questions", "criteria_physical", "criteria_nonphysical", "references"] as const;
 
 function RequiredQuestions() {
   const { data: session } = authClient.useSession();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const role = (session?.user as ({ role?: AppRole } | undefined))?.role;
   const requestedTopic = searchParams.get("topik");
   const [topic, setTopic] = useState<typeof requiredQuestionKeys[number]>(() => requiredQuestionKeys.includes(requestedTopic as typeof requiredQuestionKeys[number]) ? requestedTopic as typeof requiredQuestionKeys[number] : "self");
@@ -188,6 +192,10 @@ function RequiredQuestions() {
   const [onboardingReady, setOnboardingReady] = useState<boolean | null>(null);
   const [message, setMessage] = useState("");
   const definition = profileFormSections.find((item) => item.key === topic)!;
+  const topicIndex = requiredQuestionKeys.indexOf(topic);
+  const previousTopic = topicIndex > 0 ? requiredQuestionKeys[topicIndex - 1] : null;
+  const nextTopic = topicIndex < requiredQuestionKeys.length - 1 ? requiredQuestionKeys[topicIndex + 1] : null;
+  const completedCount = requiredQuestionKeys.filter((key) => completed.has(key)).length;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -201,9 +209,12 @@ function RequiredQuestions() {
 
   if (onboardingReady === false) return <section className="dashboard-card required-questions-locked"><ShieldCheck /><div><h2>Selesaikan biodata dasar terlebih dahulu.</h2><p>Pertanyaan wajib dibuka setelah tiga tahap onboarding selesai. Jawaban dasar membantu pertanyaan ini dibaca dalam konteks yang benar.</p><Link href="/dashboard/biodata" className="app-primary" prefetch={false}>Lanjutkan onboarding <ArrowRight /></Link></div></section>;
   return <section className="required-questions-layout">
-    <div className="required-questions-intro"><div><p className="mono">BIODATA LANJUTAN</p><h2>Satu topik, satu fokus.</h2><p>Lengkapi bagian berikut agar admin dan mediator memiliki konteks yang cukup untuk mendampingi proses.</p></div><strong>{requiredQuestionKeys.filter((key) => completed.has(key)).length}/{requiredQuestionKeys.length}<small>selesai</small></strong></div>
-    <nav className="question-topics" aria-label="Bagian biodata lanjutan">{requiredQuestionKeys.map((key, index) => { const item = profileFormSections.find((entry) => entry.key === key)!; return <button type="button" key={key} className={`${topic === key ? "active" : ""} ${completed.has(key) ? "complete" : ""}`} onClick={() => { setTopic(key); setMessage(""); }}><span>{completed.has(key) ? <Check /> : index + 1}</span><div><strong>{item.label}</strong><small>{completed.has(key) ? "Selesai" : "Belum lengkap"}</small></div></button>; })}</nav>
-    <section className="form-card required-question-form"><header><div><p className="mono">TOPIK {requiredQuestionKeys.indexOf(topic) + 1} DARI {requiredQuestionKeys.length}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header>{message ? <p className="form-error" role="alert">{message}</p> : null}{role ? <ProfileForm sectionKey={topic} role={role} onSaved={() => setCompleted((value) => new Set(value).add(topic))} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section>
+    <div className="advanced-topic-bar">
+      <Link href="/dashboard/biodata" prefetch={false}><ChevronLeft /> Semua bagian</Link>
+      <div><span>{completedCount} dari {requiredQuestionKeys.length} bagian selesai</span><i><b style={{ width: `${Math.round((completedCount / requiredQuestionKeys.length) * 100)}%` }} /></i></div>
+      <nav aria-label="Pindah bagian biodata"><span className={!previousTopic ? "disabled" : ""}>{previousTopic ? <Link href={`/dashboard/pertanyaan-wajib?topik=${previousTopic}`} prefetch={false} aria-label="Bagian sebelumnya">←</Link> : "←"}</span><span className={!nextTopic ? "disabled" : ""}>{nextTopic ? <Link href={`/dashboard/pertanyaan-wajib?topik=${nextTopic}`} prefetch={false} aria-label="Bagian berikutnya">→</Link> : "→"}</span></nav>
+    </div>
+    <section className="form-card required-question-form"><header><div><p className="mono">BAGIAN {topicIndex + 1} DARI {requiredQuestionKeys.length}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header>{message ? <p className="form-error" role="alert">{message}</p> : null}{role ? <ProfileForm sectionKey={topic} role={role} onSaved={() => { setCompleted((value) => new Set(value).add(topic)); router.push(nextTopic ? `/dashboard/pertanyaan-wajib?topik=${nextTopic}` : "/dashboard/biodata"); }} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section>
   </section>;
 }
 
@@ -390,7 +401,7 @@ export default function DashboardSectionPage() {
   const showBiodataHub = section === "biodata" && baseComplete && !query.get("bagian");
 
   if (section === "konfigurasi" && user) return <><header className="module-heading"><div><p className="mono">KONFIGURASI SISTEM</p><h1>Atur avatar default peserta.</h1><p>Hanya admin yang dapat mengganti avatar fallback ikhwan dan akhwat.</p></div></header><AdminAvatarSettings role={user.role} /></>;
-  if (section === "pertanyaan-wajib") return <><header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/biodata" className="app-secondary" prefetch={false}><FileText /> Kembali ke biodata</Link></header><RequiredQuestions /></>;
+  if (section === "pertanyaan-wajib") return <RequiredQuestions />;
 
   return <>
     {section === "biodata" && !baseComplete ? <OnboardingProgress activeGroup={activeGroup} completed={completed} percent={percent} /> : null}
