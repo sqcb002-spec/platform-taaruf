@@ -37,14 +37,17 @@ function ParticipantOverview({ summary, name, onboardingProgress }: { summary: S
   const role = summary.user.role;
   const isGuardian = role === "guardian";
   const progress = onboardingProgress;
-  const content = !isGuardian && progress >= 100
-    ? { title: "Biodata dasar sudah selesai.", body: "Lanjutkan topik penting seperti gambaran diri, ibadah, kesiapan pernikahan, kriteria, dan referensi.", action: "Buka pusat biodata", href: "/dashboard/biodata" }
+  const profileProgress = isGuardian ? summary.completionPercent : Math.max(progress, summary.completionPercent);
+  const content = !isGuardian && profileProgress >= 100
+    ? { title: "Profil Anda siap untuk ditinjau.", body: "Seluruh bagian wajib telah selesai. Pantau rekomendasi yang telah melewati proses verifikasi.", action: "Lihat rekomendasi", href: "/dashboard/rekomendasi" }
+    : !isGuardian && progress >= 100
+      ? { title: "Lengkapi gambaran utuh diri Anda.", body: "Lanjutkan ibadah, kesiapan pernikahan, kriteria pasangan, dan referensi agar proses pencocokan lebih tepat.", action: "Buka pusat biodata", href: "/dashboard/biodata" }
     : roleContent[role];
   const participantSteps = [
     { title: "Data diri", detail: "Identitas dasar yang penting.", href: "/dashboard/biodata?bagian=profile", done: progress >= 34, current: progress < 34 },
     { title: "Fisik", detail: "Gambaran fisik secukupnya.", href: "/dashboard/biodata?bagian=physical", done: progress >= 67, current: progress >= 34 && progress < 67 },
     { title: "Keluarga", detail: "Keluarga inti dan informasi penting.", href: "/dashboard/biodata?bagian=family", done: progress >= 100, current: progress >= 67 && progress < 100 },
-    { title: "Pertanyaan lanjutan", detail: "Jawab setelah onboarding selesai.", href: "/dashboard/pertanyaan-wajib", done: false, current: progress >= 100 },
+    { title: "Pertanyaan lanjutan", detail: "Nilai, kesiapan, dan kriteria pasangan.", href: "/dashboard/pertanyaan-wajib", done: profileProgress >= 100, current: progress >= 100 && profileProgress < 100 },
   ];
   const guardianSteps = [
     { title: "Akhwat terhubung", detail: "Pastikan hubungan wali tercatat dan terverifikasi.", href: "/dashboard/amanah", done: false, current: true },
@@ -54,39 +57,62 @@ function ParticipantOverview({ summary, name, onboardingProgress }: { summary: S
   ];
   const steps = isGuardian ? guardianSteps : participantSteps;
 
-  return <div className="portal-overview">
-    <header className="portal-welcome">
-      <p>{roleLabels[role]} · {summary.user.displayCode}</p>
-      <h1>Assalamu’alaikum, {name}.</h1>
-      <span>{isGuardian ? "Ruang ini membantu Anda menjaga amanah wali dengan keputusan yang jelas dan tercatat." : "Tidak perlu terburu-buru. Selesaikan satu tahap dengan jujur sebelum melangkah ke tahap berikutnya."}</span>
-    </header>
+  return <div className="portal-overview portal-home">
+    <section className="portal-home-hero">
+      <div className="portal-home-hero-copy">
+        <p>{roleLabels[role]} <span /> {summary.user.displayCode}</p>
+        <h1><small>Assalamu’alaikum, {name}.</small>{isGuardian ? "Jaga amanah dengan keputusan yang tenang." : "Ikhtiar yang tertata, keputusan yang tenang."}</h1>
+        <span>{isGuardian ? "Setiap persetujuan tercatat tanpa mengambil alih keputusan pribadi akhwat." : "Fokus pada satu langkah yang paling berarti hari ini. Data dan batas privasi Anda tetap dijaga sesuai tahap."}</span>
+        <div className="portal-home-hero-actions">
+          <Link href={content.href} className="portal-home-primary" prefetch={false}>Lanjutkan perjalanan <ArrowRight /></Link>
+          <Link href="/dashboard/panduan" className="portal-home-secondary" prefetch={false}>Lihat alur proses</Link>
+        </div>
+        <div className="portal-home-assurance"><span><LockKeyhole /> Data bertahap</span><span><HeartHandshake /> Satu proses aktif</span><span><ShieldCheck /> Didampingi</span></div>
+      </div>
 
-    {progress < 100 ? <section className="portal-onboarding-reminder"><span><Clock3 /></span><div><strong>Lanjutkan tahap Anda</strong><p>Data tersimpan setelah Anda menekan tombol lanjutkan.</p></div><Link href={progress < 34 ? "/dashboard/biodata?bagian=profile" : progress < 67 ? "/dashboard/biodata?bagian=physical" : "/dashboard/biodata?bagian=family"} prefetch={false}>Lanjutkan <ArrowRight /></Link></section> : null}
-    <div className="portal-overview-grid">
-      <section className="portal-next-step">
+      <div className="portal-home-seal">
+        {!isGuardian ? <div className="portal-home-progress-ring" style={{ background: `conic-gradient(var(--color-accent) ${profileProgress}%, var(--color-paper-3) 0)` }}>
+          <div><strong>{profileProgress}%</strong><span>profil lengkap</span></div>
+        </div> : <div className="portal-home-guardian-mark"><ShieldCheck /><strong>Amanah wali</strong><span>Keputusan terpisah dan tercatat</span></div>}
+        <p>{isGuardian ? "Pendampingan dimulai saat ada permintaan yang telah disetujui akhwat." : profileProgress >= 100 ? "Profil siap masuk tahap peninjauan." : "Lengkapi seperlunya, simpan dengan tenang."}</p>
+      </div>
+      <HeartHandshake className="portal-home-hero-mark" aria-hidden="true" />
+    </section>
+
+    {!isGuardian ? <section className="portal-home-status" aria-label="Ringkasan akun">
+      <article><span>01</span><div><small>Kelengkapan profil</small><strong>{profileProgress}%</strong></div><i><b style={{ width: `${profileProgress}%` }} /></i></article>
+      <article><span>02</span><div><small>Proses aktif</small><strong>{summary.stats.activeProcesses}</strong></div><p>{summary.stats.activeProcesses > 0 ? "Sedang berjalan" : "Belum ada proses"}</p></article>
+      <article><span>03</span><div><small>Notifikasi</small><strong>{summary.stats.unreadNotifications}</strong></div><Link href="/dashboard/notifikasi" prefetch={false}>Buka <ArrowUpRight /></Link></article>
+    </section> : null}
+
+    {profileProgress < 100 && !isGuardian ? <section className="portal-onboarding-reminder portal-home-reminder"><span><Clock3 /></span><div><strong>Satu langkah lagi lebih dekat</strong><p>Jawaban dapat disimpan dan dilanjutkan kapan saja.</p></div><Link href={content.href} prefetch={false}>Lanjutkan <ArrowRight /></Link></section> : null}
+
+    <div className="portal-home-main">
+      <section className="portal-next-step portal-home-next">
         <div className="portal-next-copy">
           <p><Clock3 /> Langkah yang disarankan</p>
           <h2>{content.title}</h2>
           <span>{content.body}</span>
           <Link href={content.href} prefetch={false}>{content.action}<ArrowRight /></Link>
         </div>
-        {!isGuardian ? <div className="portal-completion" aria-label={`Kelengkapan biodata ${progress} persen`}><strong>{progress}%</strong><span>Biodata terisi</span><div><i style={{ width: `${progress}%` }} /></div></div> : <div className="portal-trust-mark"><LockKeyhole /><strong>Persetujuan berlapis</strong><span>Akhwat dan wali memutuskan secara terpisah.</span></div>}
+        <span className="portal-home-next-index">BERIKUTNYA · 01</span>
       </section>
 
-      <aside className="portal-guidance">
+      <aside className="portal-guidance portal-home-guidance">
         <ShieldCheck />
-        <h2>Yang kami jaga</h2>
-        <p>Kontak pribadi dan foto tidak dibuka sebagai etalase. Setiap akses mengikuti tahap, tujuan, dan persetujuan.</p>
-        <Link href="/dashboard/panduan" prefetch={false}>Baca panduan proses <ArrowUpRight /></Link>
+        <p className="mono">PRIVASI BERTAHAP</p>
+        <h2>Yang tidak menjadi etalase.</h2>
+        <p>Kontak, foto, alamat lengkap, serta jawaban sensitif hanya dibuka sesuai tujuan, tahap, dan persetujuan.</p>
+        <Link href="/dashboard/panduan" prefetch={false}>Pelajari perlindungan data <ArrowUpRight /></Link>
       </aside>
     </div>
 
-    <section className="portal-journey">
-      <header><div><h2>{isGuardian ? "Alur amanah wali" : "Perjalanan Anda"}</h2><p>{isGuardian ? "Empat titik pendampingan yang perlu Anda kenali." : "Tahap dibuat berurutan agar fokus tetap terjaga."}</p></div>{!isGuardian ? <span>{progress}% terisi</span> : null}</header>
+    <section className="portal-journey portal-home-journey">
+      <header><div><p className="mono">PETA PERJALANAN</p><h2>{isGuardian ? "Alur amanah wali" : "Empat tahap, satu tujuan."}</h2><p>{isGuardian ? "Empat titik pendampingan yang perlu Anda kenali." : "Setiap bagian dibuka berurutan agar proses tetap fokus dan tidak melelahkan."}</p></div>{!isGuardian ? <span>{steps.filter((step) => step.done).length} dari {steps.length} tahap</span> : null}</header>
       <ol>
         {steps.map((step, index) => <li key={step.title} className={step.done ? "done" : step.current ? "current" : ""}>
           <span>{step.done ? <Check /> : String(index + 1).padStart(2, "0")}</span>
-          <div><strong>{step.title}</strong><p>{step.detail}</p></div>
+          <div><small>{step.done ? "Selesai" : step.current ? "Dikerjakan sekarang" : "Tahap berikutnya"}</small><strong>{step.title}</strong><p>{step.detail}</p></div>
           <Link href={step.href} prefetch={false} aria-label={`Buka ${step.title}`}><ArrowRight /></Link>
         </li>)}
       </ol>
