@@ -3101,6 +3101,23 @@
   color: #8a4b08;
 }
 
+.match-intro.match-intro-compact {
+  padding: clamp(1rem, 2.5vw, 1.35rem);
+  align-items: center;
+}
+
+.match-intro.match-intro-compact .mono {
+  margin: 0 0 0.25rem;
+}
+
+.match-intro.match-intro-compact h2 {
+  font-size: clamp(1.45rem, 4vw, 2.25rem);
+}
+
+.match-intro.match-intro-compact aside {
+  padding: 0.7rem 0.8rem;
+}
+
 .match-grid,
 .match-skeleton-grid {
   min-width: 0;
@@ -3406,9 +3423,9 @@
   color: var(--color-accent);
 }
 
-.match-empty h3 {
+.match-empty h2 {
   margin: 0.4rem 0 0;
-  font-size: 1.25rem;
+  font-size: clamp(1.25rem, 5vw, 1.65rem);
 }
 
 .match-empty p {
@@ -3417,6 +3434,20 @@
   color: var(--color-muted);
   font-size: 0.75rem;
   line-height: 1.6;
+}
+
+.match-empty > small {
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-muted);
+  font-size: 0.56rem;
+}
+
+.match-empty > small svg {
+  width: 0.75rem;
+  color: var(--color-accent-deep);
 }
 
 .match-loading {

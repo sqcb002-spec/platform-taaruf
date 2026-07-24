@@ -346,10 +346,10 @@ function RecommendationModule() {
   if (error) return <section className="dashboard-error"><ShieldCheck /><h2>Rekomendasi belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section>;
 
   return <section className="match-space">
-    <header className="match-intro">
-      <div><p className="mono">PILIHAN TERKURASI</p><h2>{items.length > 0 ? `${items.length} profil untuk ditinjau pelan-pelan.` : "Belum ada profil yang dapat ditampilkan."}</h2><p>Ini bukan sistem swipe. Baca ringkasan secukupnya, lakukan istikharah, lalu libatkan keluarga sebelum mengambil langkah.</p></div>
-      <aside className={items.some((item) => item.candidate.isTestData) ? "is-preview" : ""}><ShieldCheck /><span><strong>{items.some((item) => item.candidate.isTestData) ? "Mode pratinjau data test" : "Privasi tahap awal"}</strong>{items.some((item) => item.candidate.isTestData) ? "Belum ada kandidat asli yang siap. Profil berikut hanya simulasi dan tidak dapat diproses sebagai pasangan nyata." : "Nama, kontak, foto, dan alamat lengkap tetap tertutup."}</span></aside>
-    </header>
+    {items.length > 0 ? <header className="match-intro match-intro-compact">
+      <div><p className="mono">REKOMENDASI</p><h2>{items.length} calon sesuai.</h2></div>
+      <aside className={items.some((item) => item.candidate.isTestData) ? "is-preview" : ""}><ShieldCheck /><span><strong>{items.some((item) => item.candidate.isTestData) ? "Data test" : "Data privat"}</strong>{items.some((item) => item.candidate.isTestData) ? "Simulasi alur" : "Identitas tetap tertutup"}</span></aside>
+    </header> : null}
 
     {items.length > 0 ? <div className="match-grid">
       {items.map((item, index) => {
@@ -377,7 +377,7 @@ function RecommendationModule() {
           <button className="match-card-action" onClick={() => setSelected(item)}>{candidate.isTestData ? "Tinjau simulasi" : "Tinjau ringkasan"} <ArrowRight /></button>
         </article>;
       })}
-    </div> : <div className="match-empty"><Search /><h3>Belum ada rekomendasi aktif.</h3><p>Profil Anda tetap tersimpan. Rekomendasi akan muncul setelah ada kandidat terverifikasi yang memenuhi batas dasar kedua pihak.</p><Link href="/dashboard/biodata" className="app-secondary" prefetch={false}>Periksa kriteria pasangan</Link></div>}
+    </div> : <div className="match-empty"><Search /><h2>Belum ada calon yang sesuai.</h2><p>Kami akan menampilkan profil ketika ada kecocokan dua arah.</p><Link href="/dashboard/biodata" className="app-secondary" prefetch={false}>Atur kriteria</Link><small><ShieldCheck /> Identitas dan kontak tetap privat.</small></div>}
 
     {selected ? <div className="match-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setSelected(null); }}>
       <section className="match-dialog" role="dialog" aria-modal="true" aria-labelledby="match-dialog-title">
@@ -844,7 +844,7 @@ export default function DashboardSectionPage() {
 
   return <>
     {section === "biodata" && !baseComplete ? <OnboardingProgress activeGroup={activeGroup} completed={completed} percent={percent} /> : null}
-    {section !== "biodata" && section !== "proses" && section !== "persetujuan" ? <header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}><FileText /> Lihat panduan</Link></header> : null}
+    {section !== "biodata" && section !== "rekomendasi" && section !== "proses" && section !== "persetujuan" ? <header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}><FileText /> Lihat panduan</Link></header> : null}
     {section !== "biodata" ? section === "peserta" ? <ParticipantDirectory /> : section === "rekomendasi" && user?.role.startsWith("participant_") ? <RecommendationModule /> : section === "proses" && user?.role.startsWith("participant_") ? <ProcessModule role={user.role} /> : section === "persetujuan" && user?.role === "guardian" ? <ProcessModule role={user.role} /> : section === "panduan" ? <ParticipantGuide /> : section === "pengaturan" ? <ParticipantSettings user={user} /> : <QueueModule section={section} /> : loading ? <section className="dashboard-loading"><div className="skeleton skeleton-panel" /><p><LoaderCircle className="spin" /> Memuat progres biodata…</p></section> : error ? <section className="dashboard-error"><ShieldCheck /><h2>Progres biodata belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section> : showBiodataHub ? <BiodataHub completed={completed} /> : <div className="biodata-layout"><aside className="section-progress"><div><strong>{percent}%</strong><span>{completed.size} bagian tersimpan</span></div></aside><section className="form-card"><header><div><p className="mono">{baseComplete ? "EDIT BIODATA" : `LANGKAH ${onboardingGroups.findIndex((group) => group.sections.includes(definition.key)) + 1}`}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header>{user ? <ProfileForm sectionKey={definition.key} role={user.role} onSaved={() => setReload((value) => value + 1)} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section></div>}
   </>;
 }
