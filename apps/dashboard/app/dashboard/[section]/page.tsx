@@ -135,6 +135,7 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
     try {
       await apiFetch(definition.key === "profile" ? "/api/profile/core" : `/api/profile/sections/${definition.key}`, { method: "PUT", body: JSON.stringify(values) });
       setState("saved");
+      window.dispatchEvent(new Event("taaruf:profile-updated"));
       onSaved();
       const nextPath = definition.key === "profile" ? "/dashboard/biodata?bagian=physical" : definition.key === "physical" ? "/dashboard/biodata?bagian=family" : definition.key === "family" ? "/dashboard" : null;
       if (nextPath) router.push(nextPath);
@@ -255,6 +256,7 @@ type Recommendation = {
     occupationField: string | null;
     manhaj: string | null;
     marriageTarget: string;
+    isTestData: boolean;
   };
 };
 
@@ -291,7 +293,7 @@ function RecommendationModule() {
   return <section className="match-space">
     <header className="match-intro">
       <div><p className="mono">PILIHAN TERKURASI</p><h2>{items.length > 0 ? `${items.length} profil untuk ditinjau pelan-pelan.` : "Belum ada profil yang dapat ditampilkan."}</h2><p>Ini bukan sistem swipe. Baca ringkasan secukupnya, lakukan istikharah, lalu libatkan keluarga sebelum mengambil langkah.</p></div>
-      <aside><ShieldCheck /><span><strong>Privasi tahap awal</strong>Nama, kontak, foto, dan alamat lengkap tetap tertutup.</span></aside>
+      <aside className={items.some((item) => item.candidate.isTestData) ? "is-preview" : ""}><ShieldCheck /><span><strong>{items.some((item) => item.candidate.isTestData) ? "Mode pratinjau data test" : "Privasi tahap awal"}</strong>{items.some((item) => item.candidate.isTestData) ? "Belum ada kandidat asli yang siap. Profil berikut hanya simulasi dan tidak dapat diproses sebagai pasangan nyata." : "Nama, kontak, foto, dan alamat lengkap tetap tertutup."}</span></aside>
     </header>
 
     {items.length > 0 ? <div className="match-grid">
@@ -303,7 +305,7 @@ function RecommendationModule() {
             <div className="match-avatar"><img src={`/avatars/${avatar}.png`} alt={`Avatar default ${candidate.role === "participant_female" ? "akhwat" : "ikhwan"}`} /><span>{String(index + 1).padStart(2, "0")}</span></div>
             <div className="match-score"><strong>{item.score}%</strong><span>kecocokan awal</span></div>
           </div>
-          <div className="match-identity"><p>{candidate.role === "participant_female" ? "AKHWAT" : "IKHWAN"} · {candidate.displayCode}</p><h3>{candidate.ageBand}</h3><span><MapPin /> {[candidate.city, candidate.province].filter(Boolean).join(", ") || "Domisili belum tersedia"}</span></div>
+          <div className="match-identity"><p>{candidate.role === "participant_female" ? "AKHWAT" : "IKHWAN"} · {candidate.displayCode}{candidate.isTestData ? <em className="match-test-badge">DATA TEST</em> : null}</p><h3>{candidate.ageBand}</h3><span><MapPin /> {[candidate.city, candidate.province].filter(Boolean).join(", ") || "Domisili belum tersedia"}</span></div>
           <div className="match-facts">
             <span><GraduationCap /><small>Pendidikan</small><strong>{candidate.educationLevel || "Belum tersedia"}</strong></span>
             <span><BriefcaseBusiness /><small>Bidang aktivitas</small><strong>{candidate.occupationField || "Belum tersedia"}</strong></span>
@@ -311,7 +313,7 @@ function RecommendationModule() {
             <span><Sparkles /><small>Manhaj</small><strong>{candidate.manhaj || "Belum tersedia"}</strong></span>
           </div>
           <div className="match-reason-preview"><Check /><span>{item.reasons[0] || "Profil memenuhi kriteria dasar Anda."}</span></div>
-          <button className="match-card-action" onClick={() => setSelected(item)}>Tinjau ringkasan <ArrowRight /></button>
+          <button className="match-card-action" onClick={() => setSelected(item)}>{candidate.isTestData ? "Tinjau simulasi" : "Tinjau ringkasan"} <ArrowRight /></button>
         </article>;
       })}
     </div> : <div className="match-empty"><Search /><h3>Belum ada rekomendasi aktif.</h3><p>Profil Anda tetap tersimpan. Rekomendasi akan muncul setelah ada kandidat terverifikasi yang memenuhi batas dasar kedua pihak.</p><Link href="/dashboard/biodata" className="app-secondary" prefetch={false}>Periksa kriteria pasangan</Link></div>}
@@ -321,6 +323,7 @@ function RecommendationModule() {
         <button className="match-dialog-close" onClick={() => setSelected(null)} aria-label="Tutup ringkasan"><X /></button>
         <p className="mono">RINGKASAN TAHAP AWAL · {selected.candidate.displayCode}</p>
         <h2 id="match-dialog-title">{selected.candidate.ageBand}, {selected.candidate.city || selected.candidate.province || "Indonesia"}</h2>
+        {selected.candidate.isTestData ? <div className="match-preview-warning"><ShieldCheck /><span><strong>Ini data simulasi.</strong>Digunakan untuk menguji tampilan dan alur. Pengajuan nyata tidak dapat dikirim ke profil ini.</span></div> : null}
         <p>Informasi ini sengaja terbatas. Kecocokan awal membantu menyaring, bukan menggantikan istikharah, pemeriksaan, dan keputusan keluarga.</p>
         <div className="match-dialog-facts">
           <span><small>Pendidikan</small><strong>{selected.candidate.educationLevel || "Belum tersedia"}</strong></span>

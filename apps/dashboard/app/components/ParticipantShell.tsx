@@ -36,7 +36,7 @@ export function ParticipantShell({ user, children }: { user: PortalUser; childre
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const nav = navForRole(user.role);
-  const summary = useDashboardSummary();
+  const summary = useDashboardSummary(pathname);
   const [onboarding, setOnboarding] = useState<{ loaded: boolean; complete: boolean; next: string }>({ loaded: !user.role.startsWith("participant_"), complete: !user.role.startsWith("participant_"), next: "profile" });
   const mobileNav: NavItem[] = [
     { label: "Beranda", href: "/dashboard", icon: Home },

@@ -8,7 +8,7 @@ import helmet from "helmet";
 import multer from "multer";
 import pinoHttp from "pino-http";
 import { toNodeHandler } from "better-auth/node";
-import { and, count, desc, eq, gt, ilike, inArray, isNull, lt, notInArray, or } from "drizzle-orm";
+import { and, count, desc, eq, gt, ilike, inArray, isNull, lt, ne, notInArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { allowedOrigins, env, googleOAuthEnabled } from "@/config";
@@ -120,12 +120,119 @@ function ageBand(birthDate: Date | null) {
   return `${lower}–${lower + 4} tahun`;
 }
 
+function ageFromBirthDate(birthDate: Date | null) {
+  if (!birthDate) return null;
+  const today = new Date();
+  let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
+  const birthdayPassed = today.getUTCMonth() > birthDate.getUTCMonth()
+    || (today.getUTCMonth() === birthDate.getUTCMonth() && today.getUTCDate() >= birthDate.getUTCDate());
+  if (!birthdayPassed) age -= 1;
+  return age;
+}
+
+async function refreshRecommendationsForParticipant(userId: string) {
+  const [actor] = await db
+    .select({
+      id: users.id,
+      role: users.role,
+      status: users.status,
+      displayCode: users.displayCode,
+      profile: profiles,
+      preferences: partnerPreferences,
+    })
+    .from(users)
+    .innerJoin(profiles, eq(profiles.userId, users.id))
+    .leftJoin(partnerPreferences, eq(partnerPreferences.userId, users.id))
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!actor?.role.startsWith("participant_") || actor.profile.completionPercent < 100) return;
+
+  if (["profile_incomplete", "pending_identity", "under_review", "self_inactive"].includes(actor.status)) {
+    await db.update(users).set({ status: "active_search", updatedAt: new Date() }).where(eq(users.id, userId));
+  }
+
+  const oppositeRole = actor.role === "participant_male" ? "participant_female" : "participant_male";
+  const actorIsTest = actor.displayCode.startsWith("TEST-");
+  const candidateRows = await db
+    .select({
+      id: users.id,
+      displayCode: users.displayCode,
+      status: users.status,
+      profile: profiles,
+    })
+    .from(users)
+    .innerJoin(profiles, eq(profiles.userId, users.id))
+    .where(and(
+      eq(users.role, oppositeRole),
+      ne(users.id, userId),
+      eq(profiles.completionPercent, 100),
+      inArray(users.status, ["profile_incomplete", "under_review", "active_search"]),
+    ))
+    .limit(100);
+
+  const preferredProvinces = Array.isArray(actor.preferences?.provinces) ? actor.preferences.provinces.filter((item): item is string => typeof item === "string") : [];
+  const preferredEducation = Array.isArray(actor.preferences?.educationLevels) ? actor.preferences.educationLevels.filter((item): item is string => typeof item === "string") : [];
+  const preferredMaritalStatuses = Array.isArray(actor.preferences?.maritalStatuses) ? actor.preferences.maritalStatuses.filter((item): item is string => typeof item === "string") : [];
+  const expiresAt = new Date(Date.now() + 30 * 86400000);
+
+  for (const candidate of candidateRows.filter((row) => row.displayCode.startsWith("TEST-") === actorIsTest)) {
+    let score = 58;
+    const reasons: string[] = [];
+    const candidateAge = ageFromBirthDate(candidate.profile.birthDate);
+    if (candidateAge !== null && actor.preferences && candidateAge >= actor.preferences.minAge && candidateAge <= actor.preferences.maxAge) {
+      score += 14;
+      reasons.push("Rentang usia berada dalam kriteria yang dipilih");
+    }
+    const candidateProvince = candidate.profile.province;
+    if (candidateProvince && preferredProvinces.some((province) => candidateProvince.toLowerCase().includes(province.toLowerCase()) || province.toLowerCase().includes(candidateProvince.toLowerCase()))) {
+      score += 10;
+      reasons.push("Domisili termasuk wilayah yang dapat dipertimbangkan");
+    }
+    if (candidate.profile.educationLevel && preferredEducation.includes(candidate.profile.educationLevel)) {
+      score += 6;
+      reasons.push("Latar pendidikan sesuai preferensi dasar");
+    }
+    if (candidate.profile.maritalStatus && preferredMaritalStatuses.includes(candidate.profile.maritalStatus)) {
+      score += 6;
+      reasons.push("Status pernikahan sesuai kriteria");
+    }
+    if (actor.profile.manhaj && candidate.profile.manhaj && actor.profile.manhaj.toLowerCase() === candidate.profile.manhaj.toLowerCase()) {
+      score += 6;
+      reasons.push("Arah pemahaman agama yang dicantumkan selaras");
+    }
+    if (actor.profile.marriageTargetMonths && candidate.profile.marriageTargetMonths && Math.abs(actor.profile.marriageTargetMonths - candidate.profile.marriageTargetMonths) <= 6) {
+      score += 6;
+      reasons.push("Target waktu menikah berada pada rentang yang berdekatan");
+    }
+    if (reasons.length === 0) reasons.push("Memenuhi batas dasar profil yang dapat ditinjau");
+
+    await db.insert(recommendations).values({
+      userId,
+      candidateId: candidate.id,
+      score: Math.min(98, score),
+      reasons,
+      source: actorIsTest ? "test_seed" : "profile_matching",
+      expiresAt,
+    }).onConflictDoUpdate({
+      target: [recommendations.userId, recommendations.candidateId],
+      set: {
+        score: Math.min(98, score),
+        reasons,
+        source: actorIsTest ? "test_seed" : "profile_matching",
+        expiresAt,
+      },
+    });
+  }
+}
+
 app.get("/api/recommendations", asyncRoute(async (req, res) => {
   const session = await requireUser(req, res);
   if (!session) return;
   if (!session.user.role.startsWith("participant_")) {
     return void res.status(403).json({ error: { code: "FORBIDDEN", message: "Akses ditolak." } });
   }
+
+  await refreshRecommendationsForParticipant(session.user.id);
 
   const rows = await db
     .select({
@@ -157,8 +264,7 @@ app.get("/api/recommendations", asyncRoute(async (req, res) => {
     .orderBy(desc(recommendations.score))
     .limit(20);
 
-  res.json({
-    data: rows.map((row) => ({
+  let data = rows.map((row) => ({
       id: row.id,
       score: Math.round(row.score),
       reasons: Array.isArray(row.reasons) ? row.reasons.filter((reason): reason is string => typeof reason === "string").slice(0, 4) : [],
@@ -176,9 +282,67 @@ app.get("/api/recommendations", asyncRoute(async (req, res) => {
         occupationField: row.occupationField,
         manhaj: row.manhaj,
         marriageTarget: row.marriageTargetMonths ? `${row.marriageTargetMonths} bulan` : "Dibicarakan saat ta’aruf",
+        isTestData: row.displayCode.startsWith("TEST-"),
       },
-    })),
-  });
+    }));
+
+  if (data.length === 0 && !session.user.displayCode.startsWith("TEST-")) {
+    const [actorProfile] = await db.select({ completionPercent: profiles.completionPercent }).from(profiles).where(eq(profiles.userId, session.user.id)).limit(1);
+    if ((actorProfile?.completionPercent ?? 0) >= 100) {
+      const oppositeRole = session.user.role === "participant_male" ? "participant_female" : "participant_male";
+      const previews = await db
+        .select({
+          candidateId: users.id,
+          displayCode: users.displayCode,
+          role: users.role,
+          province: profiles.province,
+          city: profiles.city,
+          ethnicity: profiles.ethnicity,
+          maritalStatus: profiles.maritalStatus,
+          educationLevel: profiles.educationLevel,
+          occupationField: profiles.occupationField,
+          manhaj: profiles.manhaj,
+          marriageTargetMonths: profiles.marriageTargetMonths,
+          birthDate: profiles.birthDate,
+        })
+        .from(users)
+        .innerJoin(profiles, eq(profiles.userId, users.id))
+        .where(and(
+          eq(users.role, oppositeRole),
+          ilike(users.displayCode, "TEST-%"),
+          eq(profiles.completionPercent, 100),
+        ))
+        .orderBy(users.displayCode)
+        .limit(5);
+      data = previews.map((row, index) => ({
+        id: `preview-${row.candidateId}`,
+        score: 92 - index * 3,
+        reasons: [
+          "Data simulasi untuk menguji tampilan rekomendasi",
+          "Target waktu menikah dibuat sejalan untuk kebutuhan pengujian",
+          "Domisili dan kriteria dasar dapat ditinjau pada mode pratinjau",
+        ],
+        expiresAt: new Date(Date.now() + 86400000),
+        candidate: {
+          id: row.candidateId,
+          displayCode: row.displayCode,
+          role: row.role,
+          ageBand: ageBand(row.birthDate),
+          province: row.province,
+          city: row.city,
+          ethnicity: row.ethnicity,
+          maritalStatus: row.maritalStatus,
+          educationLevel: row.educationLevel,
+          occupationField: row.occupationField,
+          manhaj: row.manhaj,
+          marriageTarget: row.marriageTargetMonths ? `${row.marriageTargetMonths} bulan` : "Dibicarakan saat ta’aruf",
+          isTestData: true,
+        },
+      }));
+    }
+  }
+
+  res.json({ data });
 }));
 
 function resolveProfileSectionStatuses(rows: Array<{ key: string; status: string; answers: unknown; encryptedAnswers: string | null }>, role: string) {
@@ -475,6 +639,13 @@ app.put("/api/profile/sections/:section", asyncRoute(async (req, res) => {
   const [completed] = await db.select({ value: count() }).from(profileSections).where(and(eq(profileSections.userId, session.user.id), eq(profileSections.status, "complete"), inArray(profileSections.key, [...requiredProfileSectionKeys])));
   const completionPercent = Math.min(100, Math.round((completed.value / requiredProfileSectionKeys.length) * 100));
   await db.insert(profiles).values({ userId: session.user.id, completionPercent }).onConflictDoUpdate({ target: profiles.userId, set: { completionPercent, updatedAt: new Date() } });
+  if (completionPercent === 100) {
+    await db.update(users).set({ status: "active_search", updatedAt: new Date() }).where(and(
+      eq(users.id, session.user.id),
+      inArray(users.status, ["profile_incomplete", "pending_identity", "under_review", "self_inactive"]),
+    ));
+    await refreshRecommendationsForParticipant(session.user.id);
+  }
   await db.insert(auditLogs).values({ actorId: session.user.id, action: "profile.section.saved", targetType: "profile_section", targetId: definition.key, metadata: { section: definition.key, protected: sensitive } });
   res.json({ data: { ok: true, completionPercent } });
 }));

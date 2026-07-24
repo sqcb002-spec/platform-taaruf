@@ -28,8 +28,15 @@ export type DashboardSummary = {
   }>;
 };
 
-export function useDashboardSummary() {
+export function useDashboardSummary(refreshKey = "") {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [revision, setRevision] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setRevision((value) => value + 1);
+    window.addEventListener("taaruf:profile-updated", refresh);
+    return () => window.removeEventListener("taaruf:profile-updated", refresh);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -37,7 +44,7 @@ export function useDashboardSummary() {
       signal: controller.signal,
     }).then(setSummary).catch(() => setSummary(null));
     return () => controller.abort();
-  }, []);
+  }, [refreshKey, revision]);
 
   return summary;
 }
