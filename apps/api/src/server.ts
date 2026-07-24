@@ -13,7 +13,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { allowedOrigins, env, googleOAuthEnabled } from "@/config";
 import { db } from "@/db/index";
-import { auditLogs, documents, jobs, moderationCases, notifications, platformSettings, profileSections, profiles, taarufProcesses, users } from "@/db/schema";
+import { auditLogs, documents, jobs, moderationCases, notifications, partnerPreferences, platformSettings, profileSections, profiles, taarufProcesses, users } from "@/db/schema";
 import { decryptBuffer, decryptJson, encryptBuffer, encryptJson } from "@/lib/crypto";
 import { profileFormSections, requiredProfileSectionKeys, sensitiveSectionKeys } from "@/lib/profile-form";
 import { getSession } from "@/session";
@@ -283,8 +283,67 @@ app.get("/api/profile/core", asyncRoute(async (req, res) => {
 }));
 
 const profileCoreSchema = z.object({
-  fullName: z.string().trim().min(3).max(120), gender: z.enum(["Ikhwan", "Akhwat"]), birthDate: z.coerce.date(), birthPlace: z.string().trim().min(2).max(100), phone: z.string().trim().regex(/^\+?[0-9]{10,15}$/), province: z.string().trim().min(2).max(80), city: z.string().trim().min(2).max(80), district: z.string().trim().min(2).max(80), village: z.string().trim().min(2).max(80), originCity: z.string().trim().min(2).max(100), maritalStatus: z.string().min(1).max(60), marriageForm: z.string().min(1).max(100), occupation: z.string().trim().min(3).max(500), salaryRange: z.string().min(1).max(80), educationLevel: z.string().min(1).max(80), manhaj: z.string().trim().min(2).max(120), ethnicity: z.string().trim().min(2).max(80), quranReading: z.string().min(1).max(80), quranMemorization: z.string().min(1).max(80), prayer: z.string().min(1).max(120), studyFrequency: z.string().min(1).max(80), music: z.string().min(1).max(80), smoking: z.string().min(1).max(40), widowMarriage: z.string().min(1).max(40), heightCm: z.coerce.number().int().min(120).max(230).optional(), weightKg: z.coerce.number().int().min(30).max(250).optional(),
+  fullName: z.string().trim().min(3).max(120), gender: z.enum(["Ikhwan", "Akhwat"]), birthDate: z.coerce.date(), birthPlace: z.string().trim().min(2).max(100), phone: z.string().trim().regex(/^\+?[0-9]{10,15}$/), province: z.string().trim().min(2).max(80), city: z.string().trim().min(2).max(80), district: z.string().trim().min(2).max(80), village: z.string().trim().min(2).max(80), originCity: z.string().trim().min(2).max(100), maritalStatus: z.string().min(1).max(60), marriageForm: z.string().min(1).max(100), occupation: z.string().trim().min(3).max(500), workplace: z.string().trim().max(160).optional(), salaryRange: z.string().min(1).max(80), educationLevel: z.string().min(1).max(80), manhaj: z.string().trim().min(2).max(120), ethnicity: z.string().trim().min(2).max(80), quranReading: z.string().min(1).max(80), quranMemorization: z.string().min(1).max(80), prayer: z.string().min(1).max(120), studyFrequency: z.string().min(1).max(80), music: z.string().min(1).max(80), smoking: z.string().min(1).max(40), widowMarriage: z.string().min(1).max(40), heightCm: z.coerce.number().int().min(120).max(230).optional(), weightKg: z.coerce.number().int().min(30).max(250).optional(),
 });
+
+function ageRangeFrom(value: string) {
+  const ages = value.match(/\d{2}/g)?.map(Number).filter((age) => age >= 18 && age <= 80) ?? [];
+  return {
+    minAge: ages[0] ?? 18,
+    maxAge: ages[1] ?? ages[0] ?? 80,
+  };
+}
+
+async function syncMatchingProjection(userId: string, section: string, answers: Record<string, string>) {
+  if (section === "physical") {
+    const heightCm = Number.parseInt(answers.heightCm ?? "", 10);
+    const weightKg = Number.parseInt(answers.weightKg ?? "", 10);
+    await db.update(profiles).set({
+      heightCm: Number.isFinite(heightCm) ? heightCm : null,
+      weightKg: Number.isFinite(weightKg) ? weightKg : null,
+      bodyShape: answers.bodyShape || null,
+      skinTone: answers.skinTone || null,
+      updatedAt: new Date(),
+    }).where(eq(profiles.userId, userId));
+    return;
+  }
+  if (section === "marriage") {
+    const targetMonths = answers.timeline === "Kurang dari 3 bulan" ? 3
+      : answers.timeline === "3–6 bulan" ? 6
+        : answers.timeline === "6–12 bulan" ? 12
+          : answers.timeline === "Lebih dari 1 tahun" ? 18
+            : null;
+    await db.update(profiles).set({ marriageTargetMonths: targetMonths, updatedAt: new Date() }).where(eq(profiles.userId, userId));
+    return;
+  }
+  if (section !== "criteria_nonphysical" && section !== "criteria_physical") return;
+
+  const [current] = await db.select().from(partnerPreferences).where(eq(partnerPreferences.userId, userId)).limit(1);
+  const existingCriteria = (current?.criteria ?? {}) as Record<string, unknown>;
+  const safeKeys = section === "criteria_nonphysical"
+    ? ["ethnicity", "occupation", "incomeExpectation", "domicile", "mahrExpectation", "maintenanceExpectation", "currentResidenceExpectation", "smokingCriteria"]
+    : ["bodyShape", "heightRange", "skinTone", "hairType"];
+  const projected = Object.fromEntries(safeKeys.filter((key) => answers[key]).map((key) => [key, answers[key]]));
+  const criteria = { ...existingCriteria, [section]: projected };
+  const ages = section === "criteria_nonphysical" ? ageRangeFrom(answers.age ?? "") : {
+    minAge: current?.minAge ?? 18,
+    maxAge: current?.maxAge ?? 80,
+  };
+  const values = {
+    userId,
+    minAge: ages.minAge,
+    maxAge: ages.maxAge,
+    provinces: section === "criteria_nonphysical" && answers.domicile ? [answers.domicile] : (current?.provinces ?? []),
+    educationLevels: section === "criteria_nonphysical" && answers.education ? [answers.education] : (current?.educationLevels ?? []),
+    maritalStatuses: section === "criteria_nonphysical" && answers.maritalStatus ? [answers.maritalStatus] : (current?.maritalStatuses ?? []),
+    criteria,
+    updatedAt: new Date(),
+  };
+  await db.insert(partnerPreferences).values(values).onConflictDoUpdate({
+    target: partnerPreferences.userId,
+    set: values,
+  });
+}
 
 app.put("/api/profile/core", asyncRoute(async (req, res) => {
   const session = await requireUser(req, res);
@@ -295,7 +354,7 @@ app.put("/api/profile/core", asyncRoute(async (req, res) => {
   const value = parsed.data;
   await db.update(users).set({ phone: value.phone, updatedAt: new Date() }).where(eq(users.id, session.user.id));
   const completionPercent = Math.round(100 / requiredProfileSectionKeys.length);
-  await db.insert(profiles).values({ userId: session.user.id, birthDate: value.birthDate, province: value.province, city: value.city, ethnicity: value.ethnicity, maritalStatus: value.maritalStatus, educationLevel: value.educationLevel, manhaj: value.manhaj, heightCm: value.heightCm, weightKg: value.weightKg, occupationField: value.occupation, completionPercent }).onConflictDoUpdate({ target: profiles.userId, set: { birthDate: value.birthDate, province: value.province, city: value.city, ethnicity: value.ethnicity, maritalStatus: value.maritalStatus, educationLevel: value.educationLevel, manhaj: value.manhaj, heightCm: value.heightCm, weightKg: value.weightKg, occupationField: value.occupation, completionPercent, updatedAt: new Date() } });
+  await db.insert(profiles).values({ userId: session.user.id, birthDate: value.birthDate, province: value.province, city: value.city, originCity: value.originCity, ethnicity: value.ethnicity, maritalStatus: value.maritalStatus, educationLevel: value.educationLevel, manhaj: value.manhaj, heightCm: value.heightCm, weightKg: value.weightKg, occupationField: value.occupation, completionPercent }).onConflictDoUpdate({ target: profiles.userId, set: { birthDate: value.birthDate, province: value.province, city: value.city, originCity: value.originCity, ethnicity: value.ethnicity, maritalStatus: value.maritalStatus, educationLevel: value.educationLevel, manhaj: value.manhaj, heightCm: value.heightCm, weightKg: value.weightKg, occupationField: value.occupation, completionPercent, updatedAt: new Date() } });
   const protectedIdentity = encryptJson(value);
   await db.insert(profileSections).values({ userId: session.user.id, key: "profile", status: "complete", answers: { fullNameProtected: true, gender: value.gender }, encryptedAnswers: protectedIdentity }).onConflictDoUpdate({ target: [profileSections.userId, profileSections.key], set: { status: "complete", answers: { fullNameProtected: true, gender: value.gender }, encryptedAnswers: protectedIdentity, updatedAt: new Date() } });
   await db.insert(auditLogs).values({ actorId: session.user.id, action: "profile.section.saved", targetType: "profile_section", targetId: "profile", metadata: { section: "profile" } });
@@ -314,13 +373,13 @@ app.put("/api/profile/sections/:section/draft", asyncRoute(async (req, res) => {
   await db.insert(profileSections).values({
     userId: session.user.id,
     key: definition.key,
-    status: "draft",
+    status: "partial",
     answers: sensitive ? { protected: true } : answers,
     encryptedAnswers: sensitive ? encryptJson(answers) : null,
   }).onConflictDoUpdate({
     target: [profileSections.userId, profileSections.key],
     set: {
-      status: "draft",
+      status: "partial",
       answers: sensitive ? { protected: true } : answers,
       encryptedAnswers: sensitive ? encryptJson(answers) : null,
       updatedAt: new Date(),
@@ -340,6 +399,7 @@ app.put("/api/profile/sections/:section", asyncRoute(async (req, res) => {
   if (invalidRequiredAnswer) return void res.status(400).json({ error: { code: "INCOMPLETE_SECTION", message: "Lengkapi semua pertanyaan wajib. Jawaban uraian minimal 10 karakter." } });
   const sensitive = sensitiveSectionKeys.has(definition.key) || applicableFields.some((field) => field.sensitive);
   await db.insert(profileSections).values({ userId: session.user.id, key: definition.key, status: "complete", answers: sensitive ? { protected: true } : answers, encryptedAnswers: sensitive ? encryptJson(answers) : null }).onConflictDoUpdate({ target: [profileSections.userId, profileSections.key], set: { status: "complete", answers: sensitive ? { protected: true } : answers, encryptedAnswers: sensitive ? encryptJson(answers) : null, updatedAt: new Date() } });
+  await syncMatchingProjection(session.user.id, definition.key, answers);
   const [completed] = await db.select({ value: count() }).from(profileSections).where(and(eq(profileSections.userId, session.user.id), eq(profileSections.status, "complete"), inArray(profileSections.key, [...requiredProfileSectionKeys])));
   const completionPercent = Math.min(100, Math.round((completed.value / requiredProfileSectionKeys.length) * 100));
   await db.insert(profiles).values({ userId: session.user.id, completionPercent }).onConflictDoUpdate({ target: profiles.userId, set: { completionPercent, updatedAt: new Date() } });

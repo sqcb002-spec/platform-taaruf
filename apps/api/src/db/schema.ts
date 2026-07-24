@@ -193,6 +193,8 @@ export const profiles = pgTable("profiles", {
   marriageTargetMonths: integer("marriage_target_months"),
   heightCm: integer("height_cm"),
   weightKg: integer("weight_kg"),
+  bodyShape: text("body_shape"),
+  skinTone: text("skin_tone"),
   completionPercent: integer("completion_percent").default(0).notNull(),
   publishedAt: timestamp("published_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true })

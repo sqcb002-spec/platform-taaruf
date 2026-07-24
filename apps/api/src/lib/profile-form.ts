@@ -128,7 +128,10 @@ export const profileFormSections: ProfileSectionDefinition[] = [
       { name: "fatherEducation", label: "Pendidikan terakhir ayah", type: "select", options: ["Tidak sekolah", "SD", "SMP", "SMA/SMK", "Diploma", "Sarjana", "Pascasarjana"], required: false },
       { name: "motherAge", label: "Usia ibu", type: "number", required: false },
       { name: "motherEducation", label: "Pendidikan terakhir ibu", type: "select", options: ["Tidak sekolah", "SD", "SMP", "SMA/SMK", "Diploma", "Sarjana", "Pascasarjana"], required: false },
-      { name: "siblingsDetail", label: "Ringkasan kakak dan adik", type: "textarea", placeholder: "Bila berkenan, tuliskan usia, pendidikan, pekerjaan, agama, dan status hidup secara ringkas.", required: false },
+      { name: "olderBrothersDetail", label: "Kakak laki-laki", type: "textarea", placeholder: "Tuliskan jumlah, usia, pendidikan, pekerjaan, agama, dan status hidup secara ringkas.", required: false },
+      { name: "olderSistersDetail", label: "Kakak perempuan", type: "textarea", placeholder: "Tuliskan jumlah, usia, pendidikan, pekerjaan, agama, dan status hidup secara ringkas.", required: false },
+      { name: "youngerSiblingsDetail", label: "Adik", type: "textarea", placeholder: "Tuliskan jumlah, usia, pendidikan, pekerjaan, agama, dan status hidup secara ringkas.", required: false },
+      { name: "siblingsDetail", label: "Catatan lain tentang saudara", type: "textarea", placeholder: "Opsional. Tambahkan kondisi keluarga yang belum terwakili di atas.", required: false },
     ],
   },
   {
@@ -183,6 +186,7 @@ export const profileFormSections: ProfileSectionDefinition[] = [
       },
       { name: "quranMemorization", label: "Adakah tambahan tentang hafalan Al-Qur’an Anda?", required: false },
       { name: "quranReading", label: "Adakah tambahan tentang kemampuan membaca Al-Qur’an Anda?", required: false },
+      { name: "quranRoutine", label: "Bagaimana rutinitas Anda membaca atau mempelajari Al-Qur’an?", type: "select", options: ["Setiap hari", "Beberapa kali dalam sepekan", "Sesekali", "Belum rutin"], required: false },
       {
         name: "demonstration",
         label: "Apa pendapat Anda tentang demonstrasi kepada pemerintah yang sah?",
@@ -217,6 +221,7 @@ export const profileFormSections: ProfileSectionDefinition[] = [
       { name: "hajjStatus", label: "Riwayat haji", type: "select", options: ["Belum pernah", "Sudah pernah", "Sudah mendaftar atau menunggu antrean", "Berencana bila dimudahkan"], required: false },
       { name: "hajjUmrah", label: "Catatan tambahan tentang haji atau umrah", required: false },
       { name: "scholarReferences", label: "Siapa ustadz yang rutin Anda jadikan rujukan belajar agama?", type: "textarea", placeholder: "Sebutkan nama ustadz atau lembaga kajian dan seberapa rutin Anda mengikutinya." },
+      { name: "studiesAttended", label: "Kajian yang pernah atau sedang diikuti", type: "textarea", placeholder: "Sebutkan tema, pemateri atau lembaga, serta apakah masih rutin diikuti.", required: false },
       {
         name: "prayer",
         label: "Kebiasaan shalat lima waktu dan berjamaah",
@@ -451,7 +456,49 @@ export const profileFormSections: ProfileSectionDefinition[] = [
         placeholder: "Jelaskan bila ada batas yang penting untuk kehidupan rumah tangga.",
         required: false,
       },
+      {
+        name: "incomeExpectation",
+        label: "Apakah penghasilan pasangan menjadi pertimbangan?",
+        labelFor: {
+          participant_male: "Apakah penghasilan calon istri menjadi pertimbangan?",
+          participant_female: "Berapa kesiapan penghasilan calon suami yang dapat Anda pertimbangkan?",
+        },
+        type: "select",
+        optionsFor: {
+          participant_male: ["Tidak menjadi syarat", "Bekerja atau berpenghasilan dapat dipertimbangkan", "Akan dibahas saat ta’aruf"],
+          participant_female: ["Tidak menetapkan nominal—dinilai dari kesiapan nafkah", "Di bawah Rp5 juta", "Rp5–10 juta", "Di atas Rp10 juta", "Akan dibahas saat ta’aruf"],
+        },
+        required: false,
+      },
+      {
+        name: "mahrExpectation",
+        label: "Kesesuaian harapan terkait mahar",
+        labelFor: {
+          participant_male: "Harapan mahar seperti apa yang dapat Anda pertimbangkan?",
+          participant_female: "Apa harapan mahar dari calon suami?",
+        },
+        placeholder: "Contoh: menyesuaikan kemampuan dan dibicarakan bersama keluarga.",
+        required: false,
+      },
+      {
+        name: "maintenanceExpectation",
+        label: "Kesiapan nafkah yang diharapkan",
+        labelFor: {
+          participant_male: "Bagaimana kesiapan nafkah yang ingin Anda sampaikan kepada calon?",
+          participant_female: "Kesiapan nafkah seperti apa yang Anda harapkan dari calon suami?",
+        },
+        type: "select",
+        options: ["Sesuai kemampuan dengan kebutuhan dasar terpenuhi", "Perlu nominal yang dibahas saat ta’aruf", "Menyesuaikan kondisi awal pernikahan", "Akan dimusyawarahkan bersama"],
+        required: false,
+      },
       { name: "domicile", label: "Domisili pasangan yang dapat Anda pertimbangkan?", placeholder: "Contoh: Jabodetabek, seluruh Indonesia, atau bersedia LDR sementara" },
+      {
+        name: "currentResidenceExpectation",
+        label: "Kondisi tempat tinggal calon saat ini yang dapat Anda pertimbangkan",
+        type: "select",
+        options: ["Tidak menjadi pertimbangan", "Tinggal sendiri atau kos", "Bersama orang tua atau keluarga", "Rumah milik sendiri", "Akan dibahas saat ta’aruf"],
+        required: false,
+      },
       {
         name: "religionCriteria",
         label: "Pemahaman agama dan manhaj seperti apa yang Anda harapkan?",
