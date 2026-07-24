@@ -37,7 +37,7 @@ function ParticipantOverview({ summary, name, onboardingProgress }: { summary: S
   const role = summary.user.role;
   const isGuardian = role === "guardian";
   const progress = onboardingProgress;
-  const profileProgress = isGuardian ? summary.completionPercent : Math.max(progress, summary.completionPercent);
+  const profileProgress = summary.completionPercent;
   const content = !isGuardian && profileProgress >= 100
     ? { title: "Profil Anda siap untuk ditinjau.", body: "Seluruh bagian wajib telah selesai. Pantau rekomendasi yang telah melewati proses verifikasi.", action: "Lihat rekomendasi", href: "/dashboard/rekomendasi" }
     : !isGuardian && progress >= 100
