@@ -232,8 +232,24 @@ app.get("/api/admin/participants", asyncRoute(async (req, res) => {
 app.get("/api/profile/sections", asyncRoute(async (req, res) => {
   const session = await requireUser(req, res);
   if (!session) return;
-  const rows = await db.select({ key: profileSections.key, status: profileSections.status }).from(profileSections).where(eq(profileSections.userId, session.user.id));
-  res.json({ data: rows });
+  const rows = await db.select({
+    key: profileSections.key,
+    status: profileSections.status,
+    answers: profileSections.answers,
+    encryptedAnswers: profileSections.encryptedAnswers,
+  }).from(profileSections).where(eq(profileSections.userId, session.user.id));
+  const data = rows.map((row) => {
+    const definition = profileFormSections.find((item) => item.key === row.key);
+    if (!definition || ["profile", "identity"].includes(row.key)) return { key: row.key, status: row.status };
+    let answers = (row.answers ?? {}) as Record<string, unknown>;
+    if (row.encryptedAnswers) {
+      try { answers = decryptJson<Record<string, unknown>>(row.encryptedAnswers); } catch { answers = {}; }
+    }
+    const applicableFields = definition.fields.filter((field) => !field.visibleFor || field.visibleFor.includes(session.user.role as "participant_male" | "participant_female"));
+    const hasRequiredAnswers = applicableFields.every((field) => field.required === false || String(answers[field.name] ?? "").trim());
+    return { key: row.key, status: row.status === "complete" && hasRequiredAnswers ? "complete" : "draft" };
+  });
+  res.json({ data });
 }));
 
 app.get("/api/profile/sections/:section", asyncRoute(async (req, res) => {
