@@ -246,7 +246,11 @@ app.get("/api/profile/sections", asyncRoute(async (req, res) => {
       try { answers = decryptJson<Record<string, unknown>>(row.encryptedAnswers); } catch { answers = {}; }
     }
     const applicableFields = definition.fields.filter((field) => !field.visibleFor || field.visibleFor.includes(session.user.role as "participant_male" | "participant_female"));
-    const hasRequiredAnswers = applicableFields.every((field) => field.required === false || String(answers[field.name] ?? "").trim());
+    const hasRequiredAnswers = applicableFields.every((field) => {
+      if (field.required === false) return true;
+      const answer = String(answers[field.name] ?? "").trim();
+      return Boolean(answer) && (field.type !== "textarea" || answer.length >= 10);
+    });
     return { key: row.key, status: row.status === "complete" && hasRequiredAnswers ? "complete" : "draft" };
   });
   res.json({ data });
@@ -292,6 +296,33 @@ app.put("/api/profile/core", asyncRoute(async (req, res) => {
   res.json({ data: { ok: true } });
 }));
 
+app.put("/api/profile/sections/:section/draft", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  if (!session.user.role.startsWith("participant_")) return void res.status(403).json({ error: { code: "FORBIDDEN", message: "Akses ditolak." } });
+  const definition = profileFormSections.find((item) => item.key === req.params.section);
+  if (!definition || ["profile", "identity"].includes(definition.key)) return void res.status(404).json({ error: { code: "UNKNOWN_SECTION", message: "Bagian biodata tidak ditemukan." } });
+  const applicableFields = definition.fields.filter((field) => !field.visibleFor || field.visibleFor.includes(session.user.role as "participant_male" | "participant_female"));
+  const answers = Object.fromEntries(applicableFields.map((field) => [field.name, String(req.body?.[field.name] ?? "").trim()]));
+  const sensitive = sensitiveSectionKeys.has(definition.key) || applicableFields.some((field) => field.sensitive);
+  await db.insert(profileSections).values({
+    userId: session.user.id,
+    key: definition.key,
+    status: "draft",
+    answers: sensitive ? { protected: true } : answers,
+    encryptedAnswers: sensitive ? encryptJson(answers) : null,
+  }).onConflictDoUpdate({
+    target: [profileSections.userId, profileSections.key],
+    set: {
+      status: "draft",
+      answers: sensitive ? { protected: true } : answers,
+      encryptedAnswers: sensitive ? encryptJson(answers) : null,
+      updatedAt: new Date(),
+    },
+  });
+  res.json({ data: { ok: true, status: "draft" } });
+}));
+
 app.put("/api/profile/sections/:section", asyncRoute(async (req, res) => {
   const session = await requireUser(req, res);
   if (!session) return;
@@ -299,7 +330,8 @@ app.put("/api/profile/sections/:section", asyncRoute(async (req, res) => {
   if (!definition || ["profile", "identity"].includes(definition.key)) return void res.status(404).json({ error: { code: "UNKNOWN_SECTION", message: "Bagian biodata tidak ditemukan." } });
   const applicableFields = definition.fields.filter((field) => !field.visibleFor || field.visibleFor.includes(session.user.role as "participant_male" | "participant_female"));
   const answers = Object.fromEntries(applicableFields.map((field) => [field.name, String(req.body?.[field.name] ?? "").trim()]));
-  if (applicableFields.some((field) => field.required !== false && !answers[field.name])) return void res.status(400).json({ error: { code: "INCOMPLETE_SECTION", message: "Lengkapi semua pertanyaan yang bertanda wajib." } });
+  const invalidRequiredAnswer = applicableFields.some((field) => field.required !== false && (!answers[field.name] || (field.type === "textarea" && answers[field.name].length < 10)));
+  if (invalidRequiredAnswer) return void res.status(400).json({ error: { code: "INCOMPLETE_SECTION", message: "Lengkapi semua pertanyaan wajib. Jawaban uraian minimal 10 karakter." } });
   const sensitive = sensitiveSectionKeys.has(definition.key) || applicableFields.some((field) => field.sensitive);
   await db.insert(profileSections).values({ userId: session.user.id, key: definition.key, status: "complete", answers: sensitive ? { protected: true } : answers, encryptedAnswers: sensitive ? encryptJson(answers) : null }).onConflictDoUpdate({ target: [profileSections.userId, profileSections.key], set: { status: "complete", answers: sensitive ? { protected: true } : answers, encryptedAnswers: sensitive ? encryptJson(answers) : null, updatedAt: new Date() } });
   const [completed] = await db.select({ value: count() }).from(profileSections).where(and(eq(profileSections.userId, session.user.id), eq(profileSections.status, "complete")));

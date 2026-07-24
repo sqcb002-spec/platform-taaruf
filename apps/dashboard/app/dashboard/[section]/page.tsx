@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, BellRing, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, EyeOff, FileText, Filter, LoaderCircle, LockKeyhole, LogOut, RefreshCw, Search, ShieldCheck, UserRoundCheck } from "lucide-react";
@@ -11,7 +11,7 @@ import { profileFormSections } from "@/lib/profile-form";
 import { roleLabels, type AppRole } from "@/lib/roles";
 import { DocumentUpload } from "@/app/components/DocumentUpload";
 
-type SaveState = "idle" | "saving" | "saved" | "error";
+type SaveState = "idle" | "drafting" | "drafted" | "draft-error" | "saving" | "saved" | "error";
 type RegionItem = { code: string; name: string };
 
 const onboardingGroups = [
@@ -33,6 +33,9 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
   const [regions, setRegions] = useState<{ provinces: RegionItem[]; regencies: RegionItem[]; districts: RegionItem[]; villages: RegionItem[] }>({ provinces: [], regencies: [], districts: [], villages: [] });
   const [locationValues, setLocationValues] = useState({ province: "", city: "", district: "", village: "" });
   const [regionLoading, setRegionLoading] = useState(false);
+  const [characterCounts, setCharacterCounts] = useState<Record<string, number>>({});
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (definition.key !== "profile") return;
@@ -74,6 +77,7 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
     if (definition.key === "identity") return;
     const controller = new AbortController();
     setInitialValues({});
+    setCharacterCounts({});
     setState("idle");
     setMessage("");
     apiFetch<Record<string, unknown>>(definition.key === "profile" ? "/api/profile/core" : `/api/profile/sections/${definition.key}`, { signal: controller.signal }).then((data) => {
@@ -81,6 +85,11 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
       if (definition.key === "profile") setLocationValues({ province: String(data.province ?? ""), city: String(data.city ?? ""), district: String(data.district ?? ""), village: String(data.village ?? "") });
     }).catch((reason) => { if (reason?.name !== "AbortError") setMessage("Data tersimpan belum dapat dimuat."); });
     return () => controller.abort();
+  }, [definition.key]);
+
+  useEffect(() => () => {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftAbortRef.current?.abort();
   }, [definition.key]);
 
   async function loadRegion(level: "regencies" | "districts" | "villages", code: string) {
@@ -96,8 +105,30 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
     if (key === "district") { setRegions((current) => ({ ...current, villages: [] })); void loadRegion("villages", code ?? ""); }
   }
 
+  function scheduleDraft(event: React.FormEvent<HTMLFormElement>) {
+    const form = event.currentTarget;
+    const changedField = event.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+    if (changedField.tagName === "TEXTAREA" && changedField.name) setCharacterCounts((current) => ({ ...current, [changedField.name]: changedField.value.length }));
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    setState("drafting");
+    draftTimerRef.current = setTimeout(async () => {
+      draftAbortRef.current?.abort();
+      const controller = new AbortController();
+      draftAbortRef.current = controller;
+      try {
+        const values = Object.fromEntries(new FormData(form));
+        await apiFetch(`/api/profile/sections/${definition.key}/draft`, { method: "PUT", body: JSON.stringify(values), signal: controller.signal });
+        setState("drafted");
+      } catch (error) {
+        if ((error as { name?: string })?.name !== "AbortError") setState("draft-error");
+      }
+    }, 1500);
+  }
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftAbortRef.current?.abort();
     setState("saving");
     setMessage("");
     const values = Object.fromEntries(new FormData(event.currentTarget));
@@ -155,10 +186,11 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
   };
   const placeholderFor = (name: string, type?: string) => placeholders[name] ?? (type === "textarea" ? "Tuliskan jawaban Anda secara ringkas…" : "Tulis jawaban Anda…");
 
-  return <form key={Object.keys(initialValues).length} className="profile-form" onSubmit={submit}>
+  return <form key={Object.keys(initialValues).length} className="profile-form" onSubmit={submit} onInput={isAdvancedSection ? scheduleDraft : undefined}>
     {definition.key === "profile" ? <input type="hidden" name="gender" value={role === "participant_female" ? "Akhwat" : "Ikhwan"} /> : null}
-    <div className="profile-field-groups">{fieldGroups.map((group) => <section className="profile-field-group" key={group.title || definition.key}>{group.title ? <h3>{group.title}</h3> : null}<div className="field-grid">{group.fields.map((field, fieldIndex) => { const id = `${definition.key}-${field.name}`; const placeholder = ("placeholder" in field ? field.placeholder : undefined) ?? placeholderFor(field.name, field.type); const regionKey = field.name === "province" ? "provinces" : field.name === "city" ? "regencies" : field.name === "district" ? "districts" : field.name === "village" ? "villages" : null; const options: RegionItem[] = regionKey ? regions[regionKey] : (field.options ?? []).map((name) => ({ code: name, name })); const disabled = field.name === "city" ? !locationValues.province : field.name === "district" ? !locationValues.city : field.name === "village" ? !locationValues.district : false; const rawSavedValue = String(initialValues[field.name] ?? ""); const savedValue = field.name === "birthDate" && rawSavedValue ? rawSavedValue.slice(0, 10) : rawSavedValue; const isRequired = field.required !== false; return <label key={field.name} htmlFor={id}><span>{isAdvancedSection ? <b className="question-number">No. {String(fieldIndex + 1).padStart(2, "0")}</b> : null}{field.label} {isRequired ? <em>*</em> : null}</span>{field.type === "textarea" ? <textarea id={id} name={field.name} rows={4} required={isRequired} defaultValue={savedValue} placeholder={placeholder} aria-describedby={`${id}-hint`} /> : field.type === "select" ? <select id={id} name={field.name} required={isRequired} value={regionKey ? locationValues[field.name as keyof typeof locationValues] : undefined} defaultValue={regionKey ? undefined : savedValue} disabled={disabled} onChange={regionKey ? (event) => { const selected = options?.find((option) => option.name === event.target.value); selectLocation(field.name as "province" | "city" | "district" | "village", event.target.value, selected?.code); } : undefined}><option value="" disabled={isRequired}>{regionLoading && regionKey ? "Memuat wilayah…" : disabled ? "Pilih wilayah di atas dulu" : placeholder}</option>{options?.map((option) => <option key={option.code} value={option.name}>{option.name}</option>)}</select> : <input id={id} name={field.name} type={field.type ?? "text"} min={field.name === "heightCm" ? 120 : field.name === "weightKg" ? 30 : undefined} max={field.name === "heightCm" ? 230 : field.name === "weightKg" ? 250 : undefined} required={isRequired} defaultValue={savedValue} placeholder={placeholder} aria-describedby={`${id}-hint`} />}<small id={`${id}-hint`}>{isRequired ? "Wajib diisi" : "Opsional"}</small></label>; })}</div></section>)}</div>
+    <div className="profile-field-groups">{fieldGroups.map((group) => <section className="profile-field-group" key={group.title || definition.key}>{group.title ? <h3>{group.title}</h3> : null}<div className="field-grid">{group.fields.map((field, fieldIndex) => { const id = `${definition.key}-${field.name}`; const placeholder = ("placeholder" in field ? field.placeholder : undefined) ?? placeholderFor(field.name, field.type); const regionKey = field.name === "province" ? "provinces" : field.name === "city" ? "regencies" : field.name === "district" ? "districts" : field.name === "village" ? "villages" : null; const options: RegionItem[] = regionKey ? regions[regionKey] : (field.options ?? []).map((name) => ({ code: name, name })); const disabled = field.name === "city" ? !locationValues.province : field.name === "district" ? !locationValues.city : field.name === "village" ? !locationValues.district : false; const rawSavedValue = String(initialValues[field.name] ?? ""); const savedValue = field.name === "birthDate" && rawSavedValue ? rawSavedValue.slice(0, 10) : rawSavedValue; const isRequired = field.required !== false; return <label key={field.name} htmlFor={id}><span>{isAdvancedSection ? <b className="question-number">No. {String(fieldIndex + 1).padStart(2, "0")}</b> : null}{field.label} {isRequired ? <em>*</em> : null}</span>{field.type === "textarea" ? <textarea id={id} name={field.name} rows={4} required={isRequired} minLength={isAdvancedSection && isRequired ? 10 : undefined} defaultValue={savedValue} placeholder={placeholder} aria-describedby={`${id}-hint`} /> : field.type === "select" ? <select id={id} name={field.name} required={isRequired} value={regionKey ? locationValues[field.name as keyof typeof locationValues] : undefined} defaultValue={regionKey ? undefined : savedValue} disabled={disabled} onChange={regionKey ? (event) => { const selected = options?.find((option) => option.name === event.target.value); selectLocation(field.name as "province" | "city" | "district" | "village", event.target.value, selected?.code); } : undefined}><option value="" disabled={isRequired}>{regionLoading && regionKey ? "Memuat wilayah…" : disabled ? "Pilih wilayah di atas dulu" : placeholder}</option>{options?.map((option) => <option key={option.code} value={option.name}>{option.name}</option>)}</select> : <input id={id} name={field.name} type={field.type ?? "text"} min={field.name === "heightCm" ? 120 : field.name === "weightKg" ? 30 : undefined} max={field.name === "heightCm" ? 230 : field.name === "weightKg" ? 250 : undefined} required={isRequired} defaultValue={savedValue} placeholder={placeholder} aria-describedby={`${id}-hint`} />}<small id={`${id}-hint`} className={isAdvancedSection && field.type === "textarea" ? "answer-meta" : undefined}>{isAdvancedSection && field.type === "textarea" ? `${characterCounts[field.name] ?? savedValue.length} karakter • akan tersimpan otomatis` : isRequired ? "Wajib diisi" : "Opsional"}</small></label>; })}</div></section>)}</div>
     {definition.key === "physical" && role === "participant_male" ? <div className="upload-grid physical-selfie-upload"><DocumentUpload kind="profile_photo" label="Foto terbaru (opsional)" maxSizeMb={2} allowWebp /><p className="field-note">Foto disimpan privat dan hanya dapat dibuka sesuai persetujuan serta tahap proses.</p></div> : null}
+    {isAdvancedSection ? <p className={`form-autosave ${state}`} aria-live="polite"><span />{state === "drafting" ? "Menunggu Anda selesai mengetik…" : state === "drafted" ? "Draft tersimpan otomatis" : state === "draft-error" ? "Draft belum tersimpan—periksa koneksi" : "Jawaban disimpan otomatis 1,5 detik setelah Anda berhenti mengetik"}</p> : null}
     <label className="form-attestation"><input type="checkbox" name="_attestation" required /><span>Saya menyatakan data pada bagian ini benar dan dapat dipertanggungjawabkan.</span></label>
     <PrivacyNote />
     {message ? <p className="form-error" role="alert">{message}</p> : null}
@@ -215,7 +247,7 @@ function RequiredQuestions() {
       <div><span>{completedCount} dari {requiredQuestionKeys.length} bagian selesai</span><i><b style={{ width: `${Math.round((completedCount / requiredQuestionKeys.length) * 100)}%` }} /></i></div>
       <nav aria-label="Pindah bagian biodata"><span className={!previousTopic ? "disabled" : ""}>{previousTopic ? <Link href={`/dashboard/pertanyaan-wajib?topik=${previousTopic}`} prefetch={false} aria-label="Bagian sebelumnya">←</Link> : "←"}</span><span className={!nextTopic ? "disabled" : ""}>{nextTopic ? <Link href={`/dashboard/pertanyaan-wajib?topik=${nextTopic}`} prefetch={false} aria-label="Bagian berikutnya">→</Link> : "→"}</span></nav>
     </div>
-    <section className="form-card required-question-form"><header><div><p className="mono">BAGIAN {topicIndex + 1} DARI {requiredQuestionKeys.length}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header>{message ? <p className="form-error" role="alert">{message}</p> : null}{role ? <ProfileForm sectionKey={topic} role={role} onSaved={() => { setCompleted((value) => new Set(value).add(topic)); router.push(nextTopic ? `/dashboard/pertanyaan-wajib?topik=${nextTopic}` : "/dashboard/biodata"); }} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section>
+    <section className="form-card required-question-form"><header><div><p className="mono">BAGIAN {topicIndex + 1} DARI {requiredQuestionKeys.length}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header><div className="question-guidance"><span>Jawaban uraian minimal 10 karakter</span><span>Draft tersimpan otomatis setelah 1,5 detik</span></div>{message ? <p className="form-error" role="alert">{message}</p> : null}{role ? <ProfileForm sectionKey={topic} role={role} onSaved={() => { setCompleted((value) => new Set(value).add(topic)); router.push(nextTopic ? `/dashboard/pertanyaan-wajib?topik=${nextTopic}` : "/dashboard/biodata"); }} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section>
   </section>;
 }
 

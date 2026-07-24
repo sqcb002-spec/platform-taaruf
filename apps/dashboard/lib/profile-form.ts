@@ -152,17 +152,19 @@ export const profileFormSections: ProfileSectionDefinition[] = [
     fields: [
       {
         name: "whereIsAllah",
-        label: "Allah berada di mana?",
+        label: "Menurut Anda, di manakah Allah berada?",
         type: "textarea",
+        placeholder: "Jawab berdasarkan pemahaman dan rujukan yang Anda pelajari.",
       },
       { name: "quranMemorization", label: "Hafalan Al-Qur’an" },
       { name: "quranReading", label: "Kemampuan membaca Al-Qur’an" },
       {
         name: "demonstration",
-        label: "Pandangan tentang demonstrasi",
+        label: "Apa pendapat Anda tentang demonstrasi kepada pemerintah yang sah?",
         type: "textarea",
+        placeholder: "Jelaskan pendapat serta dasar pemahaman yang Anda pegang.",
       },
-      { name: "music", label: "Pandangan tentang musik", type: "textarea" },
+      { name: "music", label: "Apa pendapat Anda tentang musik?", type: "textarea", placeholder: "Jelaskan pandangan dan penerapannya dalam keseharian Anda." },
       {
         name: "ikhtilath",
         label: "Pemahaman tentang ikhtilath",
@@ -181,6 +183,7 @@ export const profileFormSections: ProfileSectionDefinition[] = [
         type: "textarea",
       },
       { name: "hajjUmrah", label: "Riwayat haji atau umrah" },
+      { name: "scholarReferences", label: "Siapa ustadz yang rutin Anda jadikan rujukan belajar agama?", type: "textarea", placeholder: "Sebutkan nama ustadz atau lembaga kajian dan seberapa rutin Anda mengikutinya." },
       {
         name: "prayer",
         label: "Kebiasaan shalat lima waktu dan berjamaah",
@@ -204,6 +207,7 @@ export const profileFormSections: ProfileSectionDefinition[] = [
     description: "Kesiapan nyata dan tujuan membangun rumah tangga.",
     sensitive: true,
     fields: [
+      { name: "marriageIntention", label: "Apa niat utama Anda menikah?", type: "textarea", placeholder: "Ceritakan alasan dan tujuan yang ingin Anda jaga dalam pernikahan." },
       { name: "vision", label: "Visi pernikahan", type: "textarea" },
       { name: "mission", label: "Misi pernikahan", type: "textarea" },
       { name: "cost", label: "Kesiapan biaya pernikahan", type: "textarea" },
@@ -214,6 +218,7 @@ export const profileFormSections: ProfileSectionDefinition[] = [
         label: "Pola asuh yang diharapkan",
         type: "textarea",
       },
+      { name: "familyRelationship", label: "Bagaimana hubungan Anda dengan orang tua dan keluarga besar?", type: "textarea", placeholder: "Ceritakan kedekatan, pola komunikasi, dan tanggung jawab yang sedang Anda jalankan." },
       { name: "timeline", label: "Target waktu menikah" },
       {
         name: "childhoodWound",
@@ -229,17 +234,18 @@ export const profileFormSections: ProfileSectionDefinition[] = [
     description: "Rencana kehidupan setelah menikah.",
     fields: [
       { name: "career", label: "Rencana karier", type: "textarea" },
-      { name: "futureDomicile", label: "Rencana domisili", type: "textarea" },
+      { name: "futureDomicile", label: "Di mana Anda berencana tinggal setelah menikah?", type: "textarea", placeholder: "Sebutkan kota atau bentuk tempat tinggal serta kemungkinan berpindah." },
       { name: "children", label: "Harapan keturunan", type: "textarea" },
       { name: "childEducation", label: "Pendidikan anak", type: "textarea" },
-      { name: "finance", label: "Keuangan rumah tangga", type: "textarea" },
+      { name: "finance", label: "Bagaimana Anda ingin mengatur keuangan keluarga?", type: "textarea", placeholder: "Jelaskan nafkah, anggaran, tabungan, keterbukaan penghasilan, dan pengambilan keputusan." },
+      { name: "parentFinancialSupport", label: "Setelah menikah, apakah Anda masih memiliki tanggungan nafkah untuk orang tua atau keluarga?", type: "textarea", placeholder: "Jelaskan bentuk, perkiraan rutin, dan bagaimana hal ini akan dibicarakan dengan pasangan.", sensitive: true },
       {
         name: "religiousGrowth",
         label: "Peningkatan ilmu agama",
         type: "textarea",
       },
-      { name: "shortTarget", label: "Target jangka pendek", type: "textarea" },
-      { name: "longTarget", label: "Target jangka panjang", type: "textarea" },
+      { name: "shortTarget", label: "Apa target jangka pendek Anda setelah menikah?", type: "textarea", placeholder: "Contoh: tempat tinggal, penyesuaian kerja, keuangan, atau pendidikan keluarga." },
+      { name: "longTarget", label: "Apa target jangka panjang Anda setelah menikah?", type: "textarea", placeholder: "Ceritakan gambaran keluarga yang ingin dibangun dalam lima sampai sepuluh tahun." },
       {
         name: "wifeWorking",
         label: "Pandangan istri bekerja",
@@ -334,16 +340,11 @@ export const profileFormSections: ProfileSectionDefinition[] = [
   },
   {
     key: "emotion",
-    label: "Karakter & emosi",
-    description: "Pengelolaan emosi, batasan, dan pembawaan diri.",
+    label: "Emosi & batas pribadi",
+    description: "Cara mengelola emosi, menetapkan batas, dan membawa diri.",
     sensitive: true,
     fields: [
-      {
-        name: "deepCharacter",
-        label: "Penjelasan karakter mendalam",
-        type: "textarea",
-      },
-      { name: "mbti", label: "Hasil MBTI (informasi pendukung)" },
+      { name: "mbti", label: "Hasil MBTI (informasi pendukung)", required: false },
       { name: "anger", label: "Kondisi ketika marah", type: "textarea" },
       {
         name: "triggers",
@@ -360,9 +361,11 @@ export const profileFormSections: ProfileSectionDefinition[] = [
     label: "Pola hidup",
     description: "Rutinitas makan, tidur, olahraga, dan kebiasaan penting.",
     fields: [
+      { name: "dailyRoutine", label: "Ceritakan kegiatan Anda sehari-hari", type: "textarea", placeholder: "Ceritakan rutinitas sejak bangun, pekerjaan, ibadah, waktu keluarga, hingga istirahat." },
       { name: "diet", label: "Pola makan", type: "textarea" },
       { name: "sleep", label: "Pola tidur", type: "textarea" },
       { name: "exercise", label: "Pola olahraga", type: "textarea" },
+      { name: "socialMedia", label: "Bagaimana pandangan dan kebiasaan Anda dalam menggunakan media sosial?", type: "textarea", placeholder: "Jelaskan platform yang digunakan, kebiasaan mengunggah diri, dan batas privasi setelah menikah." },
       {
         name: "smoking",
         label: "Rokok atau kebiasaan adiktif",

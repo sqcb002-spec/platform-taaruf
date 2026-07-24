@@ -1649,6 +1649,20 @@
 .question-topics strong, .question-topics small { display: block; }
 .question-topics small { margin-top: .25rem; color: var(--color-muted); font-size: .68rem; line-height: 1.35; }
 .required-question-form { padding: clamp(1rem, 3vw, 2rem); }
+.question-guidance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem 1rem;
+  margin-top: .9rem;
+  padding: .7rem .8rem;
+  border-left: 2px solid var(--color-accent);
+  background: var(--color-cyan-soft);
+  color: var(--color-muted);
+  font-size: .66rem;
+  line-height: 1.5;
+}
+.question-guidance span { display: inline-flex; align-items: center; gap: .38rem; }
+.question-guidance span::before { content: ""; width: .3rem; height: .3rem; border-radius: 50%; background: var(--color-accent); }
 .required-question-form .field-grid { grid-template-columns: 1fr; gap: .8rem; }
 .required-question-form .profile-field-group label {
   padding: clamp(.85rem, 2vw, 1.1rem);
@@ -1667,6 +1681,13 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 .required-question-form .profile-field-group label > span { font-size: .82rem; line-height: 1.55; }
+.required-question-form .profile-field-group label > small { display: none; }
+.required-question-form .profile-field-group label > small.answer-meta {
+  display: block;
+  color: var(--color-muted);
+  font-size: .62rem;
+  text-align: right;
+}
 .question-number {
   display: block;
   margin-bottom: .28rem;
@@ -1676,6 +1697,30 @@
   text-transform: uppercase;
 }
 .required-question-form textarea { min-height: 6.5rem; line-height: 1.6; resize: vertical; }
+.form-autosave {
+  display: flex;
+  align-items: center;
+  gap: .48rem;
+  width: fit-content;
+  margin: .1rem 0;
+  color: var(--color-muted);
+  font-size: .68rem;
+  line-height: 1.45;
+}
+.form-autosave > span {
+  width: .45rem;
+  height: .45rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--color-muted);
+  transition: background-color var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out);
+}
+.form-autosave.drafting > span { background: var(--color-accent); animation: autosave-pulse 1s ease-in-out infinite; }
+.form-autosave.drafted { color: var(--color-accent-deep); }
+.form-autosave.drafted > span { background: var(--color-accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 12%, transparent); }
+.form-autosave.draft-error { color: var(--color-coral-ink); }
+.form-autosave.draft-error > span { background: var(--color-coral-ink); }
+@keyframes autosave-pulse { 50% { opacity: .35; transform: scale(.78); } }
 .question-list { display: grid; gap: 1rem; margin-top: 1.2rem; }
 .question-list label { display: grid; gap: .45rem; }
 .question-list label > span { font-weight: 800; line-height: 1.45; }
