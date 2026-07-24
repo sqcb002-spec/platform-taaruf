@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, BellRing, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, EyeOff, FileText, Filter, LoaderCircle, LockKeyhole, LogOut, RefreshCw, Search, ShieldCheck, UserRoundCheck } from "lucide-react";
+import { ArrowRight, BellRing, BookOpen, BriefcaseBusiness, CalendarDays, Check, ChevronLeft, ChevronRight, EyeOff, FileText, Filter, GraduationCap, HeartHandshake, LoaderCircle, LockKeyhole, LogOut, MapPin, RefreshCw, Search, ShieldCheck, Sparkles, UserRoundCheck, X } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { apiFetch, apiUrl } from "@/lib/api-client";
 import { navForRole, sectionCopy } from "@/lib/dashboard-config";
@@ -237,6 +237,104 @@ function QueueModule({ section }: { section: string }) {
   return <section className="queue-card"><div className="queue-tools"><div className="queue-search"><Search /><input placeholder="Cari kode atau status…" /></div><button><Filter /> Filter</button></div><div className="data-table"><div className="data-row data-head"><span>Kode / proses</span><span>Status</span><span>Informasi utama</span><span>Tenggat</span><span /></div><div className="empty-queue"><Search /><h3>Belum ada data pada ruang ini.</h3><p>{section === "rekomendasi" ? "Rekomendasi muncul setelah seluruh biodata dan verifikasi disetujui." : "Item baru akan muncul otomatis ketika membutuhkan tindakan Anda."}</p></div></div></section>;
 }
 
+type Recommendation = {
+  id: string;
+  score: number;
+  reasons: string[];
+  expiresAt: string;
+  candidate: {
+    id: string;
+    displayCode: string;
+    role: "participant_male" | "participant_female";
+    ageBand: string;
+    province: string | null;
+    city: string | null;
+    ethnicity: string | null;
+    maritalStatus: string | null;
+    educationLevel: string | null;
+    occupationField: string | null;
+    manhaj: string | null;
+    marriageTarget: string;
+  };
+};
+
+function RecommendationModule() {
+  const [items, setItems] = useState<Recommendation[]>([]);
+  const [selected, setSelected] = useState<Recommendation | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reload, setReload] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    apiFetch<Recommendation[]>("/api/recommendations", { signal: controller.signal })
+      .then(setItems)
+      .catch((reason) => {
+        if (reason?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "Rekomendasi belum dapat dimuat.");
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [reload]);
+
+  useEffect(() => {
+    if (!selected) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setSelected(null); };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [selected]);
+
+  if (loading) return <section className="match-loading" aria-label="Memuat rekomendasi"><div className="match-skeleton-grid">{[1, 2, 3].map((item) => <div className="skeleton match-skeleton-card" key={item} />)}</div><p><LoaderCircle className="spin" /> Menyusun pilihan yang relevan…</p></section>;
+  if (error) return <section className="dashboard-error"><ShieldCheck /><h2>Rekomendasi belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section>;
+
+  return <section className="match-space">
+    <header className="match-intro">
+      <div><p className="mono">PILIHAN TERKURASI</p><h2>{items.length > 0 ? `${items.length} profil untuk ditinjau pelan-pelan.` : "Belum ada profil yang dapat ditampilkan."}</h2><p>Ini bukan sistem swipe. Baca ringkasan secukupnya, lakukan istikharah, lalu libatkan keluarga sebelum mengambil langkah.</p></div>
+      <aside><ShieldCheck /><span><strong>Privasi tahap awal</strong>Nama, kontak, foto, dan alamat lengkap tetap tertutup.</span></aside>
+    </header>
+
+    {items.length > 0 ? <div className="match-grid">
+      {items.map((item, index) => {
+        const candidate = item.candidate;
+        const avatar = candidate.role === "participant_female" ? "pp_akhwat" : "pp_ikhwan";
+        return <article className="match-card" key={item.id} style={{ "--match-delay": `${Math.min(index, 6) * 55}ms` } as React.CSSProperties}>
+          <div className="match-card-top">
+            <div className="match-avatar"><img src={`/avatars/${avatar}.png`} alt={`Avatar default ${candidate.role === "participant_female" ? "akhwat" : "ikhwan"}`} /><span>{String(index + 1).padStart(2, "0")}</span></div>
+            <div className="match-score"><strong>{item.score}%</strong><span>kecocokan awal</span></div>
+          </div>
+          <div className="match-identity"><p>{candidate.role === "participant_female" ? "AKHWAT" : "IKHWAN"} · {candidate.displayCode}</p><h3>{candidate.ageBand}</h3><span><MapPin /> {[candidate.city, candidate.province].filter(Boolean).join(", ") || "Domisili belum tersedia"}</span></div>
+          <div className="match-facts">
+            <span><GraduationCap /><small>Pendidikan</small><strong>{candidate.educationLevel || "Belum tersedia"}</strong></span>
+            <span><BriefcaseBusiness /><small>Bidang aktivitas</small><strong>{candidate.occupationField || "Belum tersedia"}</strong></span>
+            <span><HeartHandshake /><small>Status</small><strong>{candidate.maritalStatus || "Belum tersedia"}</strong></span>
+            <span><Sparkles /><small>Manhaj</small><strong>{candidate.manhaj || "Belum tersedia"}</strong></span>
+          </div>
+          <div className="match-reason-preview"><Check /><span>{item.reasons[0] || "Profil memenuhi kriteria dasar Anda."}</span></div>
+          <button className="match-card-action" onClick={() => setSelected(item)}>Tinjau ringkasan <ArrowRight /></button>
+        </article>;
+      })}
+    </div> : <div className="match-empty"><Search /><h3>Belum ada rekomendasi aktif.</h3><p>Profil Anda tetap tersimpan. Rekomendasi akan muncul setelah ada kandidat terverifikasi yang memenuhi batas dasar kedua pihak.</p><Link href="/dashboard/biodata" className="app-secondary" prefetch={false}>Periksa kriteria pasangan</Link></div>}
+
+    {selected ? <div className="match-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setSelected(null); }}>
+      <section className="match-dialog" role="dialog" aria-modal="true" aria-labelledby="match-dialog-title">
+        <button className="match-dialog-close" onClick={() => setSelected(null)} aria-label="Tutup ringkasan"><X /></button>
+        <p className="mono">RINGKASAN TAHAP AWAL · {selected.candidate.displayCode}</p>
+        <h2 id="match-dialog-title">{selected.candidate.ageBand}, {selected.candidate.city || selected.candidate.province || "Indonesia"}</h2>
+        <p>Informasi ini sengaja terbatas. Kecocokan awal membantu menyaring, bukan menggantikan istikharah, pemeriksaan, dan keputusan keluarga.</p>
+        <div className="match-dialog-facts">
+          <span><small>Pendidikan</small><strong>{selected.candidate.educationLevel || "Belum tersedia"}</strong></span>
+          <span><small>Pekerjaan</small><strong>{selected.candidate.occupationField || "Belum tersedia"}</strong></span>
+          <span><small>Suku</small><strong>{selected.candidate.ethnicity || "Tidak dijadikan syarat"}</strong></span>
+          <span><small>Target menikah</small><strong>{selected.candidate.marriageTarget}</strong></span>
+        </div>
+        <div className="match-dialog-reasons"><h3>Alasan kecocokan awal</h3>{selected.reasons.map((reason) => <span key={reason}><Check /> {reason}</span>)}</div>
+        <footer><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}>Baca alur pengajuan</Link><button className="app-primary" onClick={() => setSelected(null)}>Simpan untuk dipertimbangkan</button></footer>
+      </section>
+    </div> : null}
+  </section>;
+}
+
 const questionSectionKeys = ["self", "religion", "marriage", "future", "partner_questions", "criteria_nonphysical", "references", "emotion", "lifestyle", "life_story", "education", "experience", "family_details", "criteria_physical"] as const;
 const essentialQuestionKeys = ["self", "religion", "marriage", "future", "partner_questions", "criteria_nonphysical", "references"] as const;
 const optionalQuestionKeys = ["emotion", "lifestyle", "life_story", "education", "experience", "family_details", "criteria_physical"] as const;
@@ -468,6 +566,6 @@ export default function DashboardSectionPage() {
   return <>
     {section === "biodata" && !baseComplete ? <OnboardingProgress activeGroup={activeGroup} completed={completed} percent={percent} /> : null}
     {section !== "biodata" ? <header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}><FileText /> Lihat panduan</Link></header> : null}
-    {section !== "biodata" ? section === "peserta" ? <ParticipantDirectory /> : section === "panduan" ? <ParticipantGuide /> : section === "pengaturan" ? <ParticipantSettings user={user} /> : <QueueModule section={section} /> : loading ? <section className="dashboard-loading"><div className="skeleton skeleton-panel" /><p><LoaderCircle className="spin" /> Memuat progres biodata…</p></section> : error ? <section className="dashboard-error"><ShieldCheck /><h2>Progres biodata belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section> : showBiodataHub ? <BiodataHub completed={completed} /> : <div className="biodata-layout"><aside className="section-progress"><div><strong>{percent}%</strong><span>{completed.size} bagian tersimpan</span></div></aside><section className="form-card"><header><div><p className="mono">{baseComplete ? "EDIT BIODATA" : `LANGKAH ${onboardingGroups.findIndex((group) => group.sections.includes(definition.key)) + 1}`}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header>{user ? <ProfileForm sectionKey={definition.key} role={user.role} onSaved={() => setReload((value) => value + 1)} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section></div>}
+    {section !== "biodata" ? section === "peserta" ? <ParticipantDirectory /> : section === "rekomendasi" && user?.role.startsWith("participant_") ? <RecommendationModule /> : section === "panduan" ? <ParticipantGuide /> : section === "pengaturan" ? <ParticipantSettings user={user} /> : <QueueModule section={section} /> : loading ? <section className="dashboard-loading"><div className="skeleton skeleton-panel" /><p><LoaderCircle className="spin" /> Memuat progres biodata…</p></section> : error ? <section className="dashboard-error"><ShieldCheck /><h2>Progres biodata belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section> : showBiodataHub ? <BiodataHub completed={completed} /> : <div className="biodata-layout"><aside className="section-progress"><div><strong>{percent}%</strong><span>{completed.size} bagian tersimpan</span></div></aside><section className="form-card"><header><div><p className="mono">{baseComplete ? "EDIT BIODATA" : `LANGKAH ${onboardingGroups.findIndex((group) => group.sections.includes(definition.key)) + 1}`}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header>{user ? <ProfileForm sectionKey={definition.key} role={user.role} onSaved={() => setReload((value) => value + 1)} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section></div>}
   </>;
 }

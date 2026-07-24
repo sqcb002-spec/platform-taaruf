@@ -8,12 +8,12 @@ import helmet from "helmet";
 import multer from "multer";
 import pinoHttp from "pino-http";
 import { toNodeHandler } from "better-auth/node";
-import { and, count, desc, eq, ilike, inArray, isNull, lt, notInArray, or } from "drizzle-orm";
+import { and, count, desc, eq, gt, ilike, inArray, isNull, lt, notInArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { allowedOrigins, env, googleOAuthEnabled } from "@/config";
 import { db } from "@/db/index";
-import { auditLogs, documents, jobs, moderationCases, notifications, partnerPreferences, platformSettings, profileSections, profiles, taarufProcesses, users } from "@/db/schema";
+import { auditLogs, documents, jobs, moderationCases, notifications, partnerPreferences, platformSettings, profileSections, profiles, recommendations, taarufProcesses, users } from "@/db/schema";
 import { decryptBuffer, decryptJson, encryptBuffer, encryptJson } from "@/lib/crypto";
 import { profileFormSections, requiredProfileSectionKeys, sensitiveSectionKeys } from "@/lib/profile-form";
 import { getSession } from "@/session";
@@ -107,6 +107,78 @@ app.post("/api/register", asyncRoute(async (req, res) => {
 app.get("/api/me", asyncRoute(async (req, res) => {
   const session = await requireUser(req, res);
   if (session) res.json({ data: session });
+}));
+
+function ageBand(birthDate: Date | null) {
+  if (!birthDate) return "Usia belum tersedia";
+  const today = new Date();
+  let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
+  const birthdayPassed = today.getUTCMonth() > birthDate.getUTCMonth()
+    || (today.getUTCMonth() === birthDate.getUTCMonth() && today.getUTCDate() >= birthDate.getUTCDate());
+  if (!birthdayPassed) age -= 1;
+  const lower = Math.max(18, Math.floor(age / 5) * 5);
+  return `${lower}–${lower + 4} tahun`;
+}
+
+app.get("/api/recommendations", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  if (!session.user.role.startsWith("participant_")) {
+    return void res.status(403).json({ error: { code: "FORBIDDEN", message: "Akses ditolak." } });
+  }
+
+  const rows = await db
+    .select({
+      id: recommendations.id,
+      score: recommendations.score,
+      reasons: recommendations.reasons,
+      expiresAt: recommendations.expiresAt,
+      candidateId: users.id,
+      displayCode: users.displayCode,
+      role: users.role,
+      province: profiles.province,
+      city: profiles.city,
+      ethnicity: profiles.ethnicity,
+      maritalStatus: profiles.maritalStatus,
+      educationLevel: profiles.educationLevel,
+      occupationField: profiles.occupationField,
+      manhaj: profiles.manhaj,
+      marriageTargetMonths: profiles.marriageTargetMonths,
+      birthDate: profiles.birthDate,
+    })
+    .from(recommendations)
+    .innerJoin(users, eq(recommendations.candidateId, users.id))
+    .innerJoin(profiles, eq(profiles.userId, users.id))
+    .where(and(
+      eq(recommendations.userId, session.user.id),
+      gt(recommendations.expiresAt, new Date()),
+      eq(users.status, "active_search"),
+    ))
+    .orderBy(desc(recommendations.score))
+    .limit(20);
+
+  res.json({
+    data: rows.map((row) => ({
+      id: row.id,
+      score: Math.round(row.score),
+      reasons: Array.isArray(row.reasons) ? row.reasons.filter((reason): reason is string => typeof reason === "string").slice(0, 4) : [],
+      expiresAt: row.expiresAt,
+      candidate: {
+        id: row.candidateId,
+        displayCode: row.displayCode,
+        role: row.role,
+        ageBand: ageBand(row.birthDate),
+        province: row.province,
+        city: row.city,
+        ethnicity: row.ethnicity,
+        maritalStatus: row.maritalStatus,
+        educationLevel: row.educationLevel,
+        occupationField: row.occupationField,
+        manhaj: row.manhaj,
+        marriageTarget: row.marriageTargetMonths ? `${row.marriageTargetMonths} bulan` : "Dibicarakan saat ta’aruf",
+      },
+    })),
+  });
 }));
 
 function resolveProfileSectionStatuses(rows: Array<{ key: string; status: string; answers: unknown; encryptedAnswers: string | null }>, role: string) {

@@ -8,6 +8,7 @@ import {
   partnerPreferences,
   profileSections,
   profiles,
+  recommendations,
   users,
 } from "@/db/schema";
 import { encryptJson } from "@/lib/crypto";
@@ -293,13 +294,43 @@ async function seedParticipant(participant: TestParticipant) {
     });
   }
 
-  return displayCode;
+  return { userId, role: participant.role, displayCode, number: participant.number };
 }
 
 async function main() {
-  const codes: string[] = [];
-  for (const participant of participants) codes.push(await seedParticipant(participant));
-  process.stdout.write(`Seed data test selesai: ${codes.join(", ")}.\n`);
+  const seeded: Array<Awaited<ReturnType<typeof seedParticipant>>> = [];
+  for (const participant of participants) seeded.push(await seedParticipant(participant));
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 365 * 86400000);
+  const males = seeded.filter((participant) => participant.role === "participant_male");
+  const females = seeded.filter((participant) => participant.role === "participant_female");
+  for (const male of males) {
+    for (const female of females) {
+      const score = 94 - Math.abs(male.number - female.number) * 3;
+      const reasons = [
+        "Target waktu menikah berada pada rentang yang sejalan",
+        "Domisili dan kesiapan berpindah masih dapat dipertimbangkan",
+        "Nilai ibadah dasar dan arah belajar agama selaras",
+        "Harapan komunikasi rumah tangga sama-sama mengutamakan musyawarah",
+      ];
+      for (const [userId, candidateId] of [[male.userId, female.userId], [female.userId, male.userId]]) {
+        await db.insert(recommendations).values({
+          userId,
+          candidateId,
+          score,
+          reasons,
+          source: "test_seed",
+          expiresAt,
+        }).onConflictDoUpdate({
+          target: [recommendations.userId, recommendations.candidateId],
+          set: { score, reasons, source: "test_seed", expiresAt },
+        });
+      }
+    }
+  }
+
+  process.stdout.write(`Seed data test selesai: ${seeded.map((participant) => participant.displayCode).join(", ")}.\n`);
 }
 
 main().catch((error) => {
