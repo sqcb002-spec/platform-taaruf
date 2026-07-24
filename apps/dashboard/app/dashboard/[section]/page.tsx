@@ -243,6 +243,7 @@ type Recommendation = {
   score: number;
   reasons: string[];
   expiresAt: string;
+  canPropose: boolean;
   candidate: {
     id: string;
     displayCode: string;
@@ -257,6 +258,39 @@ type Recommendation = {
     manhaj: string | null;
     marriageTarget: string;
     isTestData: boolean;
+    heightCm: number | null;
+    weightKg: number | null;
+    bodyShape: string | null;
+    skinTone: string | null;
+    safeCv: {
+      childOrder?: string;
+      siblingCount?: string;
+      quranReading?: string;
+      quranMemorization?: string;
+      prayer?: string;
+      studyFrequency?: string;
+      music?: string;
+      smoking?: string;
+      hairType?: string;
+      favoriteSport?: string;
+      characterSummary?: string;
+      positiveTraits?: string;
+      negativeTraits?: string;
+      hobbies?: string;
+      polygamyPosition?: string;
+      scholarReferences?: string;
+      studiesAttended?: string;
+      clothingPractice?: string;
+      beardPractice?: string;
+      vision?: string;
+      mission?: string;
+      timeline?: string;
+      desiredAge?: string;
+      desiredDomicile?: string;
+      desiredEducation?: string;
+      desiredCharacter?: string;
+      nonNegotiables?: string;
+    };
   };
 };
 
@@ -265,6 +299,8 @@ function RecommendationModule() {
   const [selected, setSelected] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [proposalState, setProposalState] = useState<"idle" | "sending" | "sent">("idle");
+  const [proposalMessage, setProposalMessage] = useState("");
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
@@ -282,10 +318,29 @@ function RecommendationModule() {
 
   useEffect(() => {
     if (!selected) return;
+    setProposalState("idle");
+    setProposalMessage("");
     const close = (event: KeyboardEvent) => { if (event.key === "Escape") setSelected(null); };
     document.addEventListener("keydown", close);
     return () => document.removeEventListener("keydown", close);
   }, [selected]);
+
+  const submitProposal = async () => {
+    if (!selected?.canPropose || proposalState === "sending") return;
+    setProposalState("sending");
+    setProposalMessage("");
+    try {
+      await apiFetch<{ id: string }>("/api/proposals", {
+        method: "POST",
+        body: JSON.stringify({ candidateId: selected.candidate.id }),
+      });
+      setProposalState("sent");
+      setProposalMessage("Pengajuan terkirim. Calon memiliki waktu 3 hari untuk memberi respons.");
+    } catch (reason) {
+      setProposalState("idle");
+      setProposalMessage(reason instanceof Error ? reason.message : "Pengajuan belum dapat dikirim.");
+    }
+  };
 
   if (loading) return <section className="match-loading" aria-label="Memuat rekomendasi"><div className="match-skeleton-grid">{[1, 2, 3].map((item) => <div className="skeleton match-skeleton-card" key={item} />)}</div><p><LoaderCircle className="spin" /> Menyusun pilihan yang relevan…</p></section>;
   if (error) return <section className="dashboard-error"><ShieldCheck /><h2>Rekomendasi belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section>;
@@ -312,6 +367,12 @@ function RecommendationModule() {
             <span><HeartHandshake /><small>Status</small><strong>{candidate.maritalStatus || "Belum tersedia"}</strong></span>
             <span><Sparkles /><small>Manhaj</small><strong>{candidate.manhaj || "Belum tersedia"}</strong></span>
           </div>
+          <div className="match-cv-preview">
+            <span><small>Fisik</small><strong>{[candidate.heightCm ? `${candidate.heightCm} cm` : "", candidate.weightKg ? `${candidate.weightKg} kg` : "", candidate.bodyShape, candidate.skinTone].filter(Boolean).join(" · ") || "Belum tersedia"}</strong></span>
+            <span><small>Al-Qur&apos;an</small><strong>{[candidate.safeCv.quranReading, candidate.safeCv.quranMemorization].filter(Boolean).join(" · ") || "Belum tersedia"}</strong></span>
+            <span><small>Kebiasaan</small><strong>{candidate.safeCv.smoking ? `Merokok: ${candidate.safeCv.smoking}` : "Belum tersedia"}</strong></span>
+          </div>
+          {candidate.safeCv.positiveTraits ? <p className="match-character"><strong>Gambaran diri</strong>{candidate.safeCv.positiveTraits}</p> : null}
           <div className="match-reason-preview"><Check /><span>{item.reasons[0] || "Profil memenuhi kriteria dasar Anda."}</span></div>
           <button className="match-card-action" onClick={() => setSelected(item)}>{candidate.isTestData ? "Tinjau simulasi" : "Tinjau ringkasan"} <ArrowRight /></button>
         </article>;
@@ -323,16 +384,52 @@ function RecommendationModule() {
         <button className="match-dialog-close" onClick={() => setSelected(null)} aria-label="Tutup ringkasan"><X /></button>
         <p className="mono">RINGKASAN TAHAP AWAL · {selected.candidate.displayCode}</p>
         <h2 id="match-dialog-title">{selected.candidate.ageBand}, {selected.candidate.city || selected.candidate.province || "Indonesia"}</h2>
-        {selected.candidate.isTestData ? <div className="match-preview-warning"><ShieldCheck /><span><strong>Ini data simulasi.</strong>Digunakan untuk menguji tampilan dan alur. Pengajuan nyata tidak dapat dikirim ke profil ini.</span></div> : null}
+        {selected.candidate.isTestData ? <div className="match-preview-warning"><ShieldCheck /><span><strong>Ini data simulasi.</strong>{selected.canPropose ? "Akun test dapat memakai profil ini untuk menguji alur pengajuan." : "Profil ditampilkan untuk menguji kecocokan dan tampilan; akun nyata tidak dapat mengajukannya."}</span></div> : null}
         <p>Informasi ini sengaja terbatas. Kecocokan awal membantu menyaring, bukan menggantikan istikharah, pemeriksaan, dan keputusan keluarga.</p>
-        <div className="match-dialog-facts">
-          <span><small>Pendidikan</small><strong>{selected.candidate.educationLevel || "Belum tersedia"}</strong></span>
-          <span><small>Pekerjaan</small><strong>{selected.candidate.occupationField || "Belum tersedia"}</strong></span>
-          <span><small>Suku</small><strong>{selected.candidate.ethnicity || "Tidak dijadikan syarat"}</strong></span>
-          <span><small>Target menikah</small><strong>{selected.candidate.marriageTarget}</strong></span>
+        <div className="match-dialog-section">
+          <h3>Biodata ringkas</h3>
+          <div className="match-dialog-facts">
+            <span><small>Status</small><strong>{selected.candidate.maritalStatus || "Belum tersedia"}</strong></span>
+            <span><small>Pendidikan</small><strong>{selected.candidate.educationLevel || "Belum tersedia"}</strong></span>
+            <span><small>Bidang aktivitas</small><strong>{selected.candidate.occupationField || "Belum tersedia"}</strong></span>
+            <span><small>Suku</small><strong>{selected.candidate.ethnicity || "Tidak dijadikan syarat"}</strong></span>
+            <span><small>Fisik</small><strong>{[selected.candidate.heightCm ? `${selected.candidate.heightCm} cm` : "", selected.candidate.weightKg ? `${selected.candidate.weightKg} kg` : "", selected.candidate.bodyShape, selected.candidate.skinTone].filter(Boolean).join(" · ") || "Belum tersedia"}</strong></span>
+            <span><small>Keluarga</small><strong>{selected.candidate.safeCv.childOrder ? `Anak ke-${selected.candidate.safeCv.childOrder}${selected.candidate.safeCv.siblingCount ? `, ${selected.candidate.safeCv.siblingCount} saudara` : ""}` : "Belum tersedia"}</strong></span>
+          </div>
+        </div>
+        <div className="match-dialog-section">
+          <h3>Ibadah & kebiasaan</h3>
+          <div className="match-detail-list">
+            <span><small>Al-Qur&apos;an</small><strong>{[selected.candidate.safeCv.quranReading, selected.candidate.safeCv.quranMemorization].filter(Boolean).join(" · ") || "Belum tersedia"}</strong></span>
+            <span><small>Shalat & kajian</small><strong>{[selected.candidate.safeCv.prayer, selected.candidate.safeCv.studyFrequency].filter(Boolean).join(" · ") || "Belum tersedia"}</strong></span>
+            <span><small>Musik & rokok</small><strong>{[`Musik: ${selected.candidate.safeCv.music || "belum tersedia"}`, `Merokok: ${selected.candidate.safeCv.smoking || "belum tersedia"}`].join(" · ")}</strong></span>
+            {selected.candidate.safeCv.scholarReferences ? <span><small>Rujukan belajar</small><strong>{selected.candidate.safeCv.scholarReferences}</strong></span> : null}
+            {selected.candidate.safeCv.studiesAttended ? <span><small>Kajian</small><strong>{selected.candidate.safeCv.studiesAttended}</strong></span> : null}
+          </div>
+        </div>
+        <div className="match-dialog-section">
+          <h3>Gambaran diri & pernikahan</h3>
+          <div className="match-detail-list">
+            {selected.candidate.safeCv.positiveTraits ? <span><small>Kekuatan diri</small><strong>{selected.candidate.safeCv.positiveTraits}</strong></span> : null}
+            {selected.candidate.safeCv.negativeTraits ? <span><small>Hal yang sedang diperbaiki</small><strong>{selected.candidate.safeCv.negativeTraits}</strong></span> : null}
+            {selected.candidate.safeCv.hobbies ? <span><small>Hobi</small><strong>{selected.candidate.safeCv.hobbies}</strong></span> : null}
+            {selected.candidate.safeCv.vision ? <span><small>Visi rumah tangga</small><strong>{selected.candidate.safeCv.vision}</strong></span> : null}
+            <span><small>Target menikah</small><strong>{selected.candidate.safeCv.timeline || selected.candidate.marriageTarget}</strong></span>
+          </div>
+        </div>
+        <div className="match-dialog-section">
+          <h3>Kriteria pasangan</h3>
+          <div className="match-detail-list">
+            <span><small>Usia & domisili</small><strong>{[selected.candidate.safeCv.desiredAge, selected.candidate.safeCv.desiredDomicile].filter(Boolean).join(" · ") || "Dibicarakan saat ta’aruf"}</strong></span>
+            {selected.candidate.safeCv.desiredEducation ? <span><small>Pendidikan</small><strong>{selected.candidate.safeCv.desiredEducation}</strong></span> : null}
+            {selected.candidate.safeCv.desiredCharacter ? <span><small>Agama & karakter</small><strong>{selected.candidate.safeCv.desiredCharacter}</strong></span> : null}
+            {selected.candidate.safeCv.nonNegotiables ? <span><small>Batas utama</small><strong>{selected.candidate.safeCv.nonNegotiables}</strong></span> : null}
+          </div>
         </div>
         <div className="match-dialog-reasons"><h3>Alasan kecocokan awal</h3>{selected.reasons.map((reason) => <span key={reason}><Check /> {reason}</span>)}</div>
-        <footer><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}>Baca alur pengajuan</Link><button className="app-primary" onClick={() => setSelected(null)}>Selesai meninjau</button></footer>
+        <div className="match-private-note"><EyeOff /><span><strong>Tetap dirahasiakan pada tahap ini</strong>Nama lengkap, kontak, tanggal lahir persis, alamat rinci, tempat kerja, penghasilan, identitas keluarga, referensi, dan detail kesehatan.</span></div>
+        {proposalMessage ? <p className={`match-proposal-message ${proposalState === "sent" ? "success" : ""}`} role="status">{proposalMessage}</p> : null}
+        <footer><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}>Baca alur pengajuan</Link>{selected.canPropose ? <button className="app-primary" onClick={submitProposal} disabled={proposalState !== "idle"}>{proposalState === "sending" ? <><LoaderCircle className="spin" /> Mengirim…</> : proposalState === "sent" ? <><Check /> Pengajuan terkirim</> : "Ajukan ta’aruf"}</button> : <button className="app-primary" onClick={() => setSelected(null)}>Selesai meninjau</button>}</footer>
       </section>
     </div> : null}
   </section>;

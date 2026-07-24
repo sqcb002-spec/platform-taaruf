@@ -40,6 +40,22 @@ type TestParticipant = {
   weight: number;
   skinTone: string;
   bodyShape: string;
+  maritalStatus?: string;
+  manhaj?: string;
+  desiredMinAge?: number;
+  desiredMaxAge?: number;
+  desiredProvinces?: string[];
+  acceptedMaritalStatuses?: string[];
+  desiredEducation?: string[];
+  positiveTraits?: string;
+  negativeTraits?: string;
+  vision?: string;
+  scholarReferences?: string;
+  timeline?: string;
+  quranReading?: string;
+  quranMemorization?: string;
+  music?: string;
+  smoking?: string;
 };
 
 const shared = {
@@ -59,6 +75,16 @@ const participants: TestParticipant[] = [
   { number: 3, role: "participant_female", name: "Maryam Zahra", email: "test.akhwat03@platformtaarufsunnah.my.id", password: "TaarufTest#Akhwat03", birthDate: "1995-12-10", province: "Jawa Tengah", city: "Kota Semarang", district: "Banyumanik", village: "Sumurboto", originCity: "Semarang", ethnicity: "Jawa", occupation: "Dokter Umum", workplace: "Rumah sakit swasta", education: "S1", height: 160, weight: 53, skinTone: "Sawo matang", bodyShape: "Normal" },
   { number: 4, role: "participant_female", name: "Salma Khairunnisa", email: "test.akhwat04@platformtaarufsunnah.my.id", password: "TaarufTest#Akhwat04", birthDate: "1999-02-26", province: "Banten", city: "Kota Tangerang", district: "Cipondoh", village: "Cipondoh Indah", originCity: "Tangerang", ethnicity: "Betawi", occupation: "Guru PAUD", workplace: "Sekolah Islam", education: "S1", height: 157, weight: 52, skinTone: "Kuning langsat", bodyShape: "Normal" },
   { number: 5, role: "participant_female", name: "Nadia Humaira", email: "test.akhwat05@platformtaarufsunnah.my.id", password: "TaarufTest#Akhwat05", birthDate: "1996-07-17", province: "Jawa Timur", city: "Kota Malang", district: "Lowokwaru", village: "Tulusrejo", originCity: "Malang", ethnicity: "Jawa", occupation: "Desainer Produk", workplace: "Studio desain", education: "S1", height: 162, weight: 55, skinTone: "Sawo matang", bodyShape: "Normal" },
+  { number: 6, role: "participant_male", name: "Rizky Maulana", email: "test.ikhwan06@platformtaarufsunnah.my.id", password: "TaarufTest#Ikhwan06", birthDate: "1997-02-01", province: "Riau", city: "Kota Pekanbaru", district: "Tampan", village: "Simpang Baru", originCity: "Pekanbaru", ethnicity: "Minang", occupation: "Teknisi Jaringan", workplace: "Freelance instalasi jaringan", education: "SMA/SMK", height: 167, weight: 79, skinTone: "Sawo matang", bodyShape: "Gemuk", desiredMinAge: 24, desiredMaxAge: 30, desiredProvinces: ["Riau", "Sumatera Barat"], positiveTraits: "Pemaaf, mudah beradaptasi, penyayang, dan lembut dalam berbicara.", negativeTraits: "Kadang tergesa-gesa dan sedang belajar lebih tertib mengelola keuangan.", scholarReferences: "Kajian lokal Pekanbaru serta kajian daring Ustadz Firanda Andirja dan Ustadz Syafiq Riza Basalamah.", timeline: "Kurang dari 3 bulan" },
+  { number: 7, role: "participant_male", name: "Abdullah Fikri", email: "test.ikhwan07@platformtaarufsunnah.my.id", password: "TaarufTest#Ikhwan07", birthDate: "1994-10-17", province: "Sulawesi Selatan", city: "Kabupaten Pinrang", district: "Watang Sawitto", village: "Jaya", originCity: "Pinrang", ethnicity: "Bugis", occupation: "Wirausaha", workplace: "Usaha perdagangan keluarga", education: "SMA/SMK", height: 173, weight: 57, skinTone: "Kuning langsat", bodyShape: "Kurus", desiredMinAge: 24, desiredMaxAge: 32, desiredProvinces: ["Sulawesi Selatan"], positiveTraits: "Tenang, tekun bekerja, menjaga amanah, dan dekat dengan keluarga.", negativeTraits: "Pendiam dan membutuhkan waktu untuk nyaman menyampaikan perasaan.", quranMemorization: "1–3 juz", scholarReferences: "Ustadz Firanda Andirja, Ustadz Abu Yahya Badrusalam, dan Ustadz Syafiq Riza Basalamah.", timeline: "Kurang dari 3 bulan" },
+  { number: 8, role: "participant_male", name: "Fahmi Hidayat", email: "test.ikhwan08@platformtaarufsunnah.my.id", password: "TaarufTest#Ikhwan08", birthDate: "1999-05-09", province: "DKI Jakarta", city: "Kota Administrasi Jakarta Timur", district: "Duren Sawit", village: "Pondok Bambu", originCity: "Klaten", ethnicity: "Jawa", occupation: "Teknisi Industri", workplace: "Perusahaan manufaktur", education: "S1", height: 164, weight: 54, skinTone: "Sawo matang", bodyShape: "Normal", desiredMinAge: 22, desiredMaxAge: 28, desiredProvinces: ["DKI Jakarta", "Jawa Barat", "Jawa Tengah"], positiveTraits: "Mandiri, disiplin, bertanggung jawab, analitis, dan senang membuat perencanaan.", negativeTraits: "Perfeksionis pada beberapa hal dan sedang belajar lebih lentur.", vision: "Membangun keluarga berlandaskan iman, ibadah, saling mendukung, dan pendidikan anak yang baik.", timeline: "6–12 bulan" },
+  { number: 9, role: "participant_male", name: "Naufal Hakim", email: "test.ikhwan09@platformtaarufsunnah.my.id", password: "TaarufTest#Ikhwan09", birthDate: "1991-09-23", province: "Jawa Barat", city: "Kota Bekasi", district: "Bekasi Selatan", village: "Pekayon Jaya", originCity: "Cirebon", ethnicity: "Sunda", occupation: "Manajer Operasional", workplace: "Perusahaan logistik", education: "S1", height: 171, weight: 70, skinTone: "Sawo matang", bodyShape: "Normal", maritalStatus: "Duda cerai hidup", desiredMinAge: 27, desiredMaxAge: 36, desiredProvinces: ["Jawa Barat", "DKI Jakarta", "Banten"], acceptedMaritalStatuses: ["Belum menikah", "Janda cerai hidup", "Janda cerai mati"], positiveTraits: "Terstruktur, sabar, bertanggung jawab, dan terbuka menerima masukan.", negativeTraits: "Cenderung terlalu serius ketika bekerja dan perlu menjaga keseimbangan waktu.", timeline: "3–6 bulan" },
+  { number: 10, role: "participant_male", name: "Zaid Alfarizi", email: "test.ikhwan10@platformtaarufsunnah.my.id", password: "TaarufTest#Ikhwan10", birthDate: "1989-12-08", province: "Jawa Tengah", city: "Kota Surakarta", district: "Banjarsari", village: "Manahan", originCity: "Surakarta", ethnicity: "Jawa", occupation: "Pengusaha Percetakan", workplace: "Usaha milik sendiri", education: "Diploma", height: 170, weight: 68, skinTone: "Kuning langsat", bodyShape: "Normal", maritalStatus: "Duda cerai mati", desiredMinAge: 28, desiredMaxAge: 38, desiredProvinces: ["Jawa Tengah", "DI Yogyakarta", "Jawa Timur"], acceptedMaritalStatuses: ["Belum menikah", "Janda cerai hidup", "Janda cerai mati"], positiveTraits: "Penyayang, konsisten, sederhana, dan senang membantu keluarga.", negativeTraits: "Tidak mudah terbuka di awal dan sedang belajar mengungkapkan kebutuhan dengan jelas.", timeline: "3–6 bulan" },
+  { number: 6, role: "participant_female", name: "Khadijah Hanum", email: "test.akhwat06@platformtaarufsunnah.my.id", password: "TaarufTest#Akhwat06", birthDate: "1989-06-11", province: "Jawa Barat", city: "Kota Bogor", district: "Bogor Barat", village: "Menteng", originCity: "Pandeglang", ethnicity: "Sunda", occupation: "Guru Mengaji dan Wirausaha", workplace: "Bimbingan belajar dan usaha kosmetik", education: "S1", height: 148, weight: 58, skinTone: "Putih", bodyShape: "Normal", maritalStatus: "Janda cerai mati", desiredMinAge: 36, desiredMaxAge: 47, desiredProvinces: ["Jawa Barat", "DKI Jakarta", "Banten"], acceptedMaritalStatuses: ["Belum menikah", "Duda cerai hidup", "Duda cerai mati"], positiveTraits: "Santun, lembut, penyayang, dan tegas dalam mendidik anak.", negativeTraits: "Membutuhkan perhatian yang cukup dan sedang belajar mengelola rasa khawatir.", scholarReferences: "Ustadz Khalid Basalamah, Ustadz Muhammad Nuzul Dzikri, dan Ustadz Firanda Andirja.", timeline: "3–6 bulan" },
+  { number: 7, role: "participant_female", name: "Rania Azzahra", email: "test.akhwat07@platformtaarufsunnah.my.id", password: "TaarufTest#Akhwat07", birthDate: "1990-01-18", province: "Banten", city: "Kota Tangerang", district: "Karawaci", village: "Nusa Jaya", originCity: "Tangerang", ethnicity: "Betawi", occupation: "Marketing", workplace: "Perusahaan jasa", education: "SMA/SMK", height: 160, weight: 72, skinTone: "Sawo matang", bodyShape: "Gemuk", maritalStatus: "Janda cerai hidup", manhaj: "Ahlus Sunnah", desiredMinAge: 34, desiredMaxAge: 45, desiredProvinces: ["Banten", "DKI Jakarta", "Jawa Barat"], acceptedMaritalStatuses: ["Belum menikah", "Duda cerai hidup", "Duda cerai mati"], positiveTraits: "Mandiri, setia, penyayang, perhatian, dan bertanggung jawab.", negativeTraits: "Terkadang terlalu banyak memikirkan sesuatu sebelum mengambil keputusan.", timeline: "Kurang dari 3 bulan" },
+  { number: 8, role: "participant_female", name: "Safira Nur", email: "test.akhwat08@platformtaarufsunnah.my.id", password: "TaarufTest#Akhwat08", birthDate: "2000-03-20", province: "Riau", city: "Kota Pekanbaru", district: "Marpoyan Damai", village: "Tangkerang Tengah", originCity: "Dumai", ethnicity: "Melayu", occupation: "Analis Laboratorium", workplace: "Laboratorium kesehatan", education: "Diploma", height: 156, weight: 50, skinTone: "Kuning langsat", bodyShape: "Normal", desiredMinAge: 27, desiredMaxAge: 35, desiredProvinces: ["Riau", "Sumatera Barat"], positiveTraits: "Teliti, lembut, menyukai keteraturan, dan mudah diajak bekerja sama.", negativeTraits: "Cenderung cemas ketika rencana berubah mendadak dan sedang belajar beradaptasi.", quranMemorization: "1–3 juz", timeline: "3–6 bulan" },
+  { number: 9, role: "participant_female", name: "Nurul Mardhiyah", email: "test.akhwat09@platformtaarufsunnah.my.id", password: "TaarufTest#Akhwat09", birthDate: "1997-08-15", province: "Sulawesi Selatan", city: "Kota Makassar", district: "Rappocini", village: "Balla Parang", originCity: "Parepare", ethnicity: "Bugis", occupation: "Guru Sekolah Dasar", workplace: "Sekolah dasar Islam", education: "S1", height: 159, weight: 52, skinTone: "Sawo matang", bodyShape: "Normal", desiredMinAge: 29, desiredMaxAge: 38, desiredProvinces: ["Sulawesi Selatan"], positiveTraits: "Sabar, hangat kepada anak-anak, rapi, dan menjaga komunikasi keluarga.", negativeTraits: "Tidak mudah menyampaikan keberatan dan sedang belajar lebih asertif.", timeline: "3–6 bulan" },
+  { number: 10, role: "participant_female", name: "Husna Karimah", email: "test.akhwat10@platformtaarufsunnah.my.id", password: "TaarufTest#Akhwat10", birthDate: "1994-11-28", province: "Jawa Tengah", city: "Kota Surakarta", district: "Laweyan", village: "Jajar", originCity: "Sukoharjo", ethnicity: "Jawa", occupation: "Pemilik Toko Daring", workplace: "Usaha dari rumah", education: "Diploma", height: 158, weight: 54, skinTone: "Kuning langsat", bodyShape: "Normal", desiredMinAge: 31, desiredMaxAge: 42, desiredProvinces: ["Jawa Tengah", "DI Yogyakarta", "Jawa Timur"], acceptedMaritalStatuses: ["Belum menikah", "Duda cerai hidup", "Duda cerai mati"], positiveTraits: "Sederhana, sabar, hemat, senang belajar, dan dekat dengan orang tua.", negativeTraits: "Cenderung memendam masalah dan sedang belajar membicarakannya lebih awal.", timeline: "3–6 bulan" },
 ];
 
 const prose: Record<string, string> = {
@@ -82,23 +108,41 @@ const prose: Record<string, string> = {
 };
 
 function defaultAnswer(field: ProfileField, participant: TestParticipant) {
+  const personalized: Record<string, string> = {
+    heightCm: String(participant.height),
+    weightKg: String(participant.weight),
+    bodyShape: participant.bodyShape,
+    skinTone: participant.skinTone,
+    childOrder: String((participant.number % 4) + 1),
+    siblingCount: String((participant.number % 5) + 1),
+    characterSummary: participant.positiveTraits ?? prose.characterSummary,
+    positiveTraits: participant.positiveTraits ?? prose.positiveTraits,
+    negativeTraits: participant.negativeTraits ?? prose.negativeTraits,
+    vision: participant.vision ?? prose.vision,
+    scholarReferences: participant.scholarReferences ?? "Kajian masjid setempat serta kajian daring dari pemateri Ahlus Sunnah yang tepercaya.",
+    timeline: participant.timeline ?? "3–6 bulan",
+    quranReading: participant.quranReading ?? "Fasih",
+    quranMemorization: participant.quranMemorization ?? "Juz 30",
+    music: participant.music ?? "Menghindari musik",
+    smoking: participant.smoking ?? "Tidak ada",
+    hobbies: participant.number % 3 === 0 ? "Membaca, olahraga ringan, dan mengunjungi keluarga." : participant.number % 2 === 0 ? "Memasak, jalan kaki, dan mendengarkan kajian." : "Membaca, bersepeda, dan kegiatan sosial.",
+    favoriteSport: participant.number % 2 === 0 ? "Jalan kaki dan bersepeda" : "Jogging dan latihan ringan",
+    healthExpectation: "Tidak menetapkan bentuk fisik tertentu; kondisi material dibahas jujur pada tahap yang tepat.",
+    characterCriteria: "Menjaga agama, jujur, bertanggung jawab, lembut dalam komunikasi, dan bersedia bermusyawarah.",
+    nonNegotiables: "Menjaga shalat wajib, tidak melakukan kekerasan, jujur, dan berkomitmen pada pernikahan.",
+    domicile: (participant.desiredProvinces ?? ["DKI Jakarta", "Jawa Barat", "Banten"]).join(", "),
+    age: `${participant.desiredMinAge ?? (participant.role === "participant_male" ? 23 : 27)}–${participant.desiredMaxAge ?? (participant.role === "participant_male" ? 32 : 38)} tahun`,
+    education: (participant.desiredEducation ?? ["SMA/SMK", "Diploma", "S1"]).join(", "),
+  };
+  if (field.name in personalized) return personalized[field.name];
   const roleOptions = field.optionsFor?.[participant.role];
   if (roleOptions?.length) return roleOptions[0];
   if (field.options?.length) return field.options[0];
-  if (field.name === "heightCm") return String(participant.height);
-  if (field.name === "weightKg") return String(participant.weight);
-  if (field.name === "bodyShape") return participant.bodyShape;
-  if (field.name === "skinTone") return participant.skinTone;
   if (field.name === "fatherName") return "Bapak Data Uji";
   if (field.name === "motherName") return "Ibu Data Uji";
   if (field.name === "fatherOccupation") return "Wiraswasta";
   if (field.name === "motherOccupation") return "Ibu Rumah Tangga";
   if (field.name.endsWith("Religion")) return "Islam";
-  if (field.name === "childOrder") return "2";
-  if (field.name === "siblingCount") return "3";
-  if (field.name === "age") return participant.role === "participant_male" ? "23–30 tahun" : "27–36 tahun";
-  if (field.name === "domicile") return "Jabodetabek dan kota besar di Pulau Jawa";
-  if (field.name === "education") return "Minimal SMA/sederajat; kesiapan belajar lebih utama";
   if (field.name.startsWith("reference")) return `Referensi ${field.name.at(-1)} Data Uji, teman keluarga, 08000000000${field.name.at(-1)}, mengenal 5 tahun`;
   if (field.name in prose) return prose[field.name];
   if (field.type === "number") return "1";
@@ -119,20 +163,20 @@ function coreAnswers(participant: TestParticipant) {
     district: participant.district,
     village: participant.village,
     originCity: participant.originCity,
-    maritalStatus: shared.maritalStatus,
+    maritalStatus: participant.maritalStatus ?? shared.maritalStatus,
     marriageForm: "Monogami / satu pasangan",
     occupation: participant.occupation,
     workplace: participant.workplace,
     salaryRange: "Akan disampaikan saat proses ta’aruf",
     educationLevel: participant.education,
-    manhaj: shared.manhaj,
+    manhaj: participant.manhaj ?? shared.manhaj,
     ethnicity: participant.ethnicity,
-    quranReading: "Baik dan terus belajar",
-    quranMemorization: "Juz 30",
+    quranReading: participant.quranReading ?? "Fasih",
+    quranMemorization: participant.quranMemorization ?? "Juz 30",
     prayer: "Menjaga shalat lima waktu",
     studyFrequency: "1–2 kali per minggu",
-    music: "Menghindari musik",
-    smoking: "Tidak",
+    music: participant.music ?? "Tidak",
+    smoking: participant.smoking ?? "Tidak",
     widowMarriage: participant.role === "participant_male" ? "Dapat dipertimbangkan" : "Dapat dipertimbangkan",
     heightCm: participant.height,
     weightKg: participant.weight,
@@ -193,11 +237,11 @@ async function seedParticipant(participant: TestParticipant) {
     city: participant.city,
     originCity: participant.originCity,
     ethnicity: participant.ethnicity,
-    maritalStatus: shared.maritalStatus,
+    maritalStatus: participant.maritalStatus ?? shared.maritalStatus,
     educationLevel: participant.education,
     occupationField: participant.occupation,
-    manhaj: shared.manhaj,
-    marriageTargetMonths: 6,
+    manhaj: participant.manhaj ?? shared.manhaj,
+    marriageTargetMonths: participant.timeline === "Kurang dari 3 bulan" ? 3 : participant.timeline === "6–12 bulan" ? 12 : 6,
     heightCm: participant.height,
     weightKg: participant.weight,
     bodyShape: participant.bodyShape,
@@ -212,11 +256,11 @@ async function seedParticipant(participant: TestParticipant) {
       city: participant.city,
       originCity: participant.originCity,
       ethnicity: participant.ethnicity,
-      maritalStatus: shared.maritalStatus,
+      maritalStatus: participant.maritalStatus ?? shared.maritalStatus,
       educationLevel: participant.education,
       occupationField: participant.occupation,
-      manhaj: shared.manhaj,
-      marriageTargetMonths: 6,
+      manhaj: participant.manhaj ?? shared.manhaj,
+      marriageTargetMonths: participant.timeline === "Kurang dari 3 bulan" ? 3 : participant.timeline === "6–12 bulan" ? 12 : 6,
       heightCm: participant.height,
       weightKg: participant.weight,
       bodyShape: participant.bodyShape,
@@ -266,21 +310,21 @@ async function seedParticipant(participant: TestParticipant) {
 
   await db.insert(partnerPreferences).values({
     userId,
-    minAge: participant.role === "participant_male" ? 23 : 27,
-    maxAge: participant.role === "participant_male" ? 30 : 36,
-    provinces: ["DKI Jakarta", "Jawa Barat", "Banten"],
-    educationLevels: ["SMA/SMK", "Diploma", "S1"],
-    maritalStatuses: ["Belum menikah"],
-    criteria: { testData: true, note: "Preferensi simulasi untuk pengujian internal." },
+    minAge: participant.desiredMinAge ?? (participant.role === "participant_male" ? 23 : 27),
+    maxAge: participant.desiredMaxAge ?? (participant.role === "participant_male" ? 32 : 38),
+    provinces: participant.desiredProvinces ?? ["DKI Jakarta", "Jawa Barat", "Banten"],
+    educationLevels: participant.desiredEducation ?? ["SMA/SMK", "Diploma", "S1"],
+    maritalStatuses: participant.acceptedMaritalStatuses ?? ["Belum menikah"],
+    criteria: { testData: true, smokingCriteria: "Harus tidak merokok", religionPriority: "Ahlus Sunnah dan menjaga shalat wajib" },
   }).onConflictDoUpdate({
     target: partnerPreferences.userId,
     set: {
-      minAge: participant.role === "participant_male" ? 23 : 27,
-      maxAge: participant.role === "participant_male" ? 30 : 36,
-      provinces: ["DKI Jakarta", "Jawa Barat", "Banten"],
-      educationLevels: ["SMA/SMK", "Diploma", "S1"],
-      maritalStatuses: ["Belum menikah"],
-      criteria: { testData: true, note: "Preferensi simulasi untuk pengujian internal." },
+      minAge: participant.desiredMinAge ?? (participant.role === "participant_male" ? 23 : 27),
+      maxAge: participant.desiredMaxAge ?? (participant.role === "participant_male" ? 32 : 38),
+      provinces: participant.desiredProvinces ?? ["DKI Jakarta", "Jawa Barat", "Banten"],
+      educationLevels: participant.desiredEducation ?? ["SMA/SMK", "Diploma", "S1"],
+      maritalStatuses: participant.acceptedMaritalStatuses ?? ["Belum menikah"],
+      criteria: { testData: true, smokingCriteria: "Harus tidak merokok", religionPriority: "Ahlus Sunnah dan menjaga shalat wajib" },
       updatedAt: now,
     },
   });
@@ -300,35 +344,7 @@ async function seedParticipant(participant: TestParticipant) {
 async function main() {
   const seeded: Array<Awaited<ReturnType<typeof seedParticipant>>> = [];
   for (const participant of participants) seeded.push(await seedParticipant(participant));
-
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 365 * 86400000);
-  const males = seeded.filter((participant) => participant.role === "participant_male");
-  const females = seeded.filter((participant) => participant.role === "participant_female");
-  for (const male of males) {
-    for (const female of females) {
-      const score = 94 - Math.abs(male.number - female.number) * 3;
-      const reasons = [
-        "Target waktu menikah berada pada rentang yang sejalan",
-        "Domisili dan kesiapan berpindah masih dapat dipertimbangkan",
-        "Nilai ibadah dasar dan arah belajar agama selaras",
-        "Harapan komunikasi rumah tangga sama-sama mengutamakan musyawarah",
-      ];
-      for (const [userId, candidateId] of [[male.userId, female.userId], [female.userId, male.userId]]) {
-        await db.insert(recommendations).values({
-          userId,
-          candidateId,
-          score,
-          reasons,
-          source: "test_seed",
-          expiresAt,
-        }).onConflictDoUpdate({
-          target: [recommendations.userId, recommendations.candidateId],
-          set: { score, reasons, source: "test_seed", expiresAt },
-        });
-      }
-    }
-  }
+  await db.delete(recommendations).where(eq(recommendations.source, "test_seed"));
 
   process.stdout.write(`Seed data test selesai: ${seeded.map((participant) => participant.displayCode).join(", ")}.\n`);
 }

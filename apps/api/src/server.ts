@@ -16,6 +16,7 @@ import { db } from "@/db/index";
 import { auditLogs, documents, jobs, moderationCases, notifications, partnerPreferences, platformSettings, profileSections, profiles, recommendations, taarufProcesses, users } from "@/db/schema";
 import { decryptBuffer, decryptJson, encryptBuffer, encryptJson } from "@/lib/crypto";
 import { profileFormSections, requiredProfileSectionKeys, sensitiveSectionKeys } from "@/lib/profile-form";
+import { createProposal } from "@/lib/workflows";
 import { getSession } from "@/session";
 
 const app = express();
@@ -130,6 +131,20 @@ function ageFromBirthDate(birthDate: Date | null) {
   return age;
 }
 
+function normalizedMaritalStatus(value: string | null) {
+  const status = value?.toLowerCase() ?? "";
+  if (status.includes("belum") || status.includes("lajang") || status.includes("single")) return "never_married";
+  if (status.includes("cerai mati") || status.includes("wafat")) return "widowed";
+  if (status.includes("cerai hidup")) return "divorced";
+  return status;
+}
+
+function acceptsMaritalStatus(accepted: unknown, status: string | null) {
+  if (!Array.isArray(accepted) || accepted.length === 0) return true;
+  const normalizedCandidate = normalizedMaritalStatus(status);
+  return accepted.some((item) => typeof item === "string" && normalizedMaritalStatus(item) === normalizedCandidate);
+}
+
 async function refreshRecommendationsForParticipant(userId: string) {
   const [actor] = await db
     .select({
@@ -159,9 +174,11 @@ async function refreshRecommendationsForParticipant(userId: string) {
       displayCode: users.displayCode,
       status: users.status,
       profile: profiles,
+      preferences: partnerPreferences,
     })
     .from(users)
     .innerJoin(profiles, eq(profiles.userId, users.id))
+    .leftJoin(partnerPreferences, eq(partnerPreferences.userId, users.id))
     .where(and(
       eq(users.role, oppositeRole),
       ne(users.id, userId),
@@ -174,8 +191,23 @@ async function refreshRecommendationsForParticipant(userId: string) {
   const preferredEducation = Array.isArray(actor.preferences?.educationLevels) ? actor.preferences.educationLevels.filter((item): item is string => typeof item === "string") : [];
   const preferredMaritalStatuses = Array.isArray(actor.preferences?.maritalStatuses) ? actor.preferences.maritalStatuses.filter((item): item is string => typeof item === "string") : [];
   const expiresAt = new Date(Date.now() + 30 * 86400000);
+  const actorAge = ageFromBirthDate(actor.profile.birthDate);
+  const eligibleCandidates = candidateRows.filter((candidate) => {
+    if (candidate.displayCode.startsWith("TEST-") !== actorIsTest) return false;
+    const candidateAge = ageFromBirthDate(candidate.profile.birthDate);
+    if (actor.preferences && candidateAge !== null && (candidateAge < actor.preferences.minAge || candidateAge > actor.preferences.maxAge)) return false;
+    if (candidate.preferences && actorAge !== null && (actorAge < candidate.preferences.minAge || actorAge > candidate.preferences.maxAge)) return false;
+    if (!acceptsMaritalStatus(actor.preferences?.maritalStatuses, candidate.profile.maritalStatus)) return false;
+    if (!acceptsMaritalStatus(candidate.preferences?.maritalStatuses, actor.profile.maritalStatus)) return false;
+    return true;
+  });
 
-  for (const candidate of candidateRows.filter((row) => row.displayCode.startsWith("TEST-") === actorIsTest)) {
+  await db.delete(recommendations).where(and(
+    eq(recommendations.userId, userId),
+    inArray(recommendations.source, ["test_seed", "profile_matching"]),
+  ));
+
+  for (const candidate of eligibleCandidates) {
     let score = 58;
     const reasons: string[] = [];
     const candidateAge = ageFromBirthDate(candidate.profile.birthDate);
@@ -204,6 +236,11 @@ async function refreshRecommendationsForParticipant(userId: string) {
       score += 6;
       reasons.push("Target waktu menikah berada pada rentang yang berdekatan");
     }
+    const candidatePreferredProvinces = Array.isArray(candidate.preferences?.provinces) ? candidate.preferences.provinces.filter((item): item is string => typeof item === "string") : [];
+    if (actor.profile.province && candidatePreferredProvinces.some((province) => actor.profile.province?.toLowerCase().includes(province.toLowerCase()) || province.toLowerCase().includes(actor.profile.province!.toLowerCase()))) {
+      score += 5;
+      reasons.push("Domisili Anda juga berada dalam jangkauan calon");
+    }
     if (reasons.length === 0) reasons.push("Memenuhi batas dasar profil yang dapat ditinjau");
 
     await db.insert(recommendations).values({
@@ -223,6 +260,68 @@ async function refreshRecommendationsForParticipant(userId: string) {
       },
     });
   }
+}
+
+async function safeCvSummaries(candidateIds: string[]) {
+  if (candidateIds.length === 0) return new Map<string, Record<string, string>>();
+  const rows = await db
+    .select({
+      userId: profileSections.userId,
+      key: profileSections.key,
+      answers: profileSections.answers,
+      encryptedAnswers: profileSections.encryptedAnswers,
+    })
+    .from(profileSections)
+    .where(and(
+      inArray(profileSections.userId, candidateIds),
+      inArray(profileSections.key, ["profile", "physical", "self", "religion", "marriage", "criteria_nonphysical", "family"]),
+    ));
+  const grouped = new Map<string, Record<string, Record<string, unknown>>>();
+  for (const row of rows) {
+    let answers = (row.answers ?? {}) as Record<string, unknown>;
+    if (row.encryptedAnswers) {
+      try { answers = decryptJson<Record<string, unknown>>(row.encryptedAnswers); } catch { answers = {}; }
+    }
+    const current = grouped.get(row.userId) ?? {};
+    current[row.key] = answers;
+    grouped.set(row.userId, current);
+  }
+
+  const result = new Map<string, Record<string, string>>();
+  for (const candidateId of candidateIds) {
+    const sections = grouped.get(candidateId) ?? {};
+    const value = (section: string, field: string) => String(sections[section]?.[field] ?? "").trim();
+    result.set(candidateId, {
+      childOrder: value("family", "childOrder"),
+      siblingCount: value("family", "siblingCount"),
+      quranReading: value("profile", "quranReading"),
+      quranMemorization: value("profile", "quranMemorization"),
+      prayer: value("profile", "prayer"),
+      studyFrequency: value("profile", "studyFrequency"),
+      music: value("profile", "music"),
+      smoking: value("profile", "smoking"),
+      hairType: value("physical", "hairType"),
+      favoriteSport: value("physical", "favoriteSport"),
+      characterSummary: value("self", "characterSummary"),
+      positiveTraits: value("self", "positiveTraits"),
+      negativeTraits: value("self", "negativeTraits"),
+      hobbies: value("self", "hobbies"),
+      polygamyPosition: value("self", "polygamyPosition"),
+      scholarReferences: value("religion", "scholarReferences"),
+      studiesAttended: value("religion", "studiesAttended"),
+      clothingPractice: value("religion", "veilPractice") || value("religion", "isbalPractice"),
+      beardPractice: value("religion", "beardPractice"),
+      vision: value("marriage", "vision"),
+      mission: value("marriage", "mission"),
+      timeline: value("marriage", "timeline"),
+      desiredAge: value("criteria_nonphysical", "age"),
+      desiredDomicile: value("criteria_nonphysical", "domicile"),
+      desiredEducation: value("criteria_nonphysical", "education"),
+      desiredCharacter: value("criteria_nonphysical", "characterCriteria"),
+      nonNegotiables: value("criteria_nonphysical", "nonNegotiables"),
+    });
+  }
+  return result;
 }
 
 app.get("/api/recommendations", asyncRoute(async (req, res) => {
@@ -252,6 +351,10 @@ app.get("/api/recommendations", asyncRoute(async (req, res) => {
       manhaj: profiles.manhaj,
       marriageTargetMonths: profiles.marriageTargetMonths,
       birthDate: profiles.birthDate,
+      heightCm: profiles.heightCm,
+      weightKg: profiles.weightKg,
+      bodyShape: profiles.bodyShape,
+      skinTone: profiles.skinTone,
     })
     .from(recommendations)
     .innerJoin(users, eq(recommendations.candidateId, users.id))
@@ -264,11 +367,13 @@ app.get("/api/recommendations", asyncRoute(async (req, res) => {
     .orderBy(desc(recommendations.score))
     .limit(20);
 
+  const storedSummaries = await safeCvSummaries(rows.map((row) => row.candidateId));
   let data = rows.map((row) => ({
       id: row.id,
       score: Math.round(row.score),
       reasons: Array.isArray(row.reasons) ? row.reasons.filter((reason): reason is string => typeof reason === "string").slice(0, 4) : [],
       expiresAt: row.expiresAt,
+      canPropose: true,
       candidate: {
         id: row.candidateId,
         displayCode: row.displayCode,
@@ -283,14 +388,24 @@ app.get("/api/recommendations", asyncRoute(async (req, res) => {
         manhaj: row.manhaj,
         marriageTarget: row.marriageTargetMonths ? `${row.marriageTargetMonths} bulan` : "Dibicarakan saat ta’aruf",
         isTestData: row.displayCode.startsWith("TEST-"),
+        heightCm: row.heightCm,
+        weightKg: row.weightKg,
+        bodyShape: row.bodyShape,
+        skinTone: row.skinTone,
+        safeCv: storedSummaries.get(row.candidateId) ?? {},
       },
     }));
 
   if (data.length === 0 && !session.user.displayCode.startsWith("TEST-")) {
-    const [actorProfile] = await db.select({ completionPercent: profiles.completionPercent }).from(profiles).where(eq(profiles.userId, session.user.id)).limit(1);
-    if ((actorProfile?.completionPercent ?? 0) >= 100) {
+    const [actorProfile] = await db
+      .select({ profile: profiles, preferences: partnerPreferences })
+      .from(profiles)
+      .leftJoin(partnerPreferences, eq(partnerPreferences.userId, profiles.userId))
+      .where(eq(profiles.userId, session.user.id))
+      .limit(1);
+    if ((actorProfile?.profile.completionPercent ?? 0) >= 100) {
       const oppositeRole = session.user.role === "participant_male" ? "participant_female" : "participant_male";
-      const previews = await db
+      const previewRows = await db
         .select({
           candidateId: users.id,
           displayCode: users.displayCode,
@@ -304,25 +419,61 @@ app.get("/api/recommendations", asyncRoute(async (req, res) => {
           manhaj: profiles.manhaj,
           marriageTargetMonths: profiles.marriageTargetMonths,
           birthDate: profiles.birthDate,
+          heightCm: profiles.heightCm,
+          weightKg: profiles.weightKg,
+          bodyShape: profiles.bodyShape,
+          skinTone: profiles.skinTone,
+          preferences: partnerPreferences,
         })
         .from(users)
         .innerJoin(profiles, eq(profiles.userId, users.id))
+        .leftJoin(partnerPreferences, eq(partnerPreferences.userId, users.id))
         .where(and(
           eq(users.role, oppositeRole),
           ilike(users.displayCode, "TEST-%"),
           eq(profiles.completionPercent, 100),
         ))
-        .orderBy(users.displayCode)
-        .limit(5);
-      data = previews.map((row, index) => ({
+        .orderBy(users.displayCode);
+      const actorAge = ageFromBirthDate(actorProfile.profile.birthDate);
+      const actorPreferredProvinces = Array.isArray(actorProfile.preferences?.provinces) ? actorProfile.preferences.provinces.filter((item): item is string => typeof item === "string") : [];
+      const previews = previewRows
+        .filter((candidate) => {
+          const candidateAge = ageFromBirthDate(candidate.birthDate);
+          if (actorProfile.preferences && candidateAge !== null && (candidateAge < actorProfile.preferences.minAge || candidateAge > actorProfile.preferences.maxAge)) return false;
+          if (candidate.preferences && actorAge !== null && (actorAge < candidate.preferences.minAge || actorAge > candidate.preferences.maxAge)) return false;
+          if (!acceptsMaritalStatus(actorProfile.preferences?.maritalStatuses, candidate.maritalStatus)) return false;
+          if (!acceptsMaritalStatus(candidate.preferences?.maritalStatuses, actorProfile.profile.maritalStatus)) return false;
+          return true;
+        })
+        .map((candidate) => {
+          let score = 58;
+          const reasons = ["Kriteria usia dan status pernikahan diterima oleh kedua pihak"];
+          const candidateAge = ageFromBirthDate(candidate.birthDate);
+          if (candidateAge !== null && actorProfile.preferences && candidateAge >= actorProfile.preferences.minAge && candidateAge <= actorProfile.preferences.maxAge) score += 14;
+          if (candidate.province && actorPreferredProvinces.some((province) => candidate.province?.toLowerCase().includes(province.toLowerCase()) || province.toLowerCase().includes(candidate.province!.toLowerCase()))) {
+            score += 10;
+            reasons.push("Domisili termasuk wilayah yang Anda pertimbangkan");
+          }
+          const candidateProvinces = Array.isArray(candidate.preferences?.provinces) ? candidate.preferences.provinces.filter((item): item is string => typeof item === "string") : [];
+          if (actorProfile.profile.province && candidateProvinces.some((province) => actorProfile.profile.province?.toLowerCase().includes(province.toLowerCase()) || province.toLowerCase().includes(actorProfile.profile.province!.toLowerCase()))) {
+            score += 8;
+            reasons.push("Domisili Anda juga masuk jangkauan calon");
+          }
+          if (actorProfile.profile.manhaj && candidate.manhaj && actorProfile.profile.manhaj.toLowerCase() === candidate.manhaj.toLowerCase()) {
+            score += 8;
+            reasons.push("Arah pemahaman agama yang dicantumkan selaras");
+          }
+          return { ...candidate, score: Math.min(96, score), reasons };
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5);
+      const previewSummaries = await safeCvSummaries(previews.map((row) => row.candidateId));
+      data = previews.map((row) => ({
         id: `preview-${row.candidateId}`,
-        score: 92 - index * 3,
-        reasons: [
-          "Data simulasi untuk menguji tampilan rekomendasi",
-          "Target waktu menikah dibuat sejalan untuk kebutuhan pengujian",
-          "Domisili dan kriteria dasar dapat ditinjau pada mode pratinjau",
-        ],
+        score: row.score,
+        reasons: row.reasons,
         expiresAt: new Date(Date.now() + 86400000),
+        canPropose: false,
         candidate: {
           id: row.candidateId,
           displayCode: row.displayCode,
@@ -337,12 +488,65 @@ app.get("/api/recommendations", asyncRoute(async (req, res) => {
           manhaj: row.manhaj,
           marriageTarget: row.marriageTargetMonths ? `${row.marriageTargetMonths} bulan` : "Dibicarakan saat ta’aruf",
           isTestData: true,
+          heightCm: row.heightCm,
+          weightKg: row.weightKg,
+          bodyShape: row.bodyShape,
+          skinTone: row.skinTone,
+          safeCv: previewSummaries.get(row.candidateId) ?? {},
         },
       }));
     }
   }
 
   res.json({ data });
+}));
+
+app.post("/api/proposals", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  const parsed = z.object({ candidateId: z.string().uuid() }).safeParse(req.body);
+  if (!parsed.success) {
+    return void res.status(400).json({ error: { code: "INVALID_PROPOSAL", message: "Calon yang dipilih tidak valid." } });
+  }
+  const [recommendation] = await db
+    .select({ candidateId: recommendations.candidateId })
+    .from(recommendations)
+    .where(and(
+      eq(recommendations.userId, session.user.id),
+      eq(recommendations.candidateId, parsed.data.candidateId),
+      gt(recommendations.expiresAt, new Date()),
+    ))
+    .limit(1);
+  if (!recommendation) {
+    return void res.status(409).json({ error: { code: "RECOMMENDATION_REQUIRED", message: "Profil ini tidak lagi berada dalam rekomendasi aktif Anda." } });
+  }
+  const [existingProposal] = await db
+    .select({ id: taarufProcesses.id })
+    .from(taarufProcesses)
+    .where(and(
+      eq(taarufProcesses.proposerId, session.user.id),
+      eq(taarufProcesses.recipientId, parsed.data.candidateId),
+      notInArray(taarufProcesses.status, ["closed", "married"]),
+    ))
+    .limit(1);
+  if (existingProposal) {
+    return void res.status(409).json({ error: { code: "PROPOSAL_ALREADY_EXISTS", message: "Pengajuan kepada calon ini sudah tercatat dan masih menunggu proses." } });
+  }
+  try {
+    const process = await createProposal(session.user.id, parsed.data.candidateId, "sop-taaruf-1.0");
+    res.status(201).json({ data: { id: process.id, status: process.status, deadlineAt: process.deadlineAt } });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "PROPOSAL_FAILED";
+    const messages: Record<string, string> = {
+      PARTICIPANT_NOT_FOUND: "Peserta tidak ditemukan.",
+      INELIGIBLE_PAIR: "Pasangan peserta tidak memenuhi batas dasar.",
+      TEST_ACCOUNT_ISOLATED: "Akun test hanya dapat mengajukan kepada akun test.",
+      PARTICIPANT_NOT_SEARCHABLE: "Salah satu peserta sedang tidak menerima pengajuan.",
+      ACTIVE_PROCESS_EXISTS: "Salah satu peserta sedang menjalani proses ta’aruf aktif.",
+      PENDING_PROPOSAL_LIMIT: "Batas pengajuan yang masih menunggu sudah tercapai.",
+    };
+    res.status(409).json({ error: { code, message: messages[code] ?? "Pengajuan belum dapat dibuat." } });
+  }
 }));
 
 function resolveProfileSectionStatuses(rows: Array<{ key: string; status: string; answers: unknown; encryptedAnswers: string | null }>, role: string) {
