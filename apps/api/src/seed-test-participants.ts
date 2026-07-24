@@ -1,14 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
 import { db } from "@/db";
 import {
   accounts,
   auditLogs,
+  guardianships,
   partnerPreferences,
   profileSections,
   profiles,
   recommendations,
+  taarufProcesses,
   users,
 } from "@/db/schema";
 import { encryptJson } from "@/lib/crypto";
@@ -341,12 +343,82 @@ async function seedParticipant(participant: TestParticipant) {
   return { userId, role: participant.role, displayCode, number: participant.number };
 }
 
+async function seedTestGuardian(femaleParticipantIds: string[]) {
+  const email = "test.wali01@platformtaarufsunnah.my.id";
+  const passwordValue = "TaarufTest#Wali01";
+  let [guardian] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  const guardianId = guardian?.id ?? randomUUID();
+  if (guardian) {
+    await db.update(users).set({
+      name: "[TEST] Wali Pendamping",
+      role: "guardian",
+      displayCode: "TEST-WALI-001",
+      status: "active_search",
+      emailVerified: true,
+      updatedAt: new Date(),
+    }).where(eq(users.id, guardianId));
+  } else {
+    await db.insert(users).values({
+      id: guardianId,
+      name: "[TEST] Wali Pendamping",
+      email,
+      role: "guardian",
+      displayCode: "TEST-WALI-001",
+      status: "active_search",
+      emailVerified: true,
+    });
+    guardian = { id: guardianId };
+  }
+  const password = await hashPassword(passwordValue);
+  const [credential] = await db.select({ id: accounts.id }).from(accounts).where(and(eq(accounts.userId, guardianId), eq(accounts.providerId, "credential"))).limit(1);
+  if (credential) {
+    await db.update(accounts).set({ password, updatedAt: new Date() }).where(eq(accounts.id, credential.id));
+  } else {
+    await db.insert(accounts).values({
+      id: randomUUID(),
+      accountId: guardianId,
+      providerId: "credential",
+      userId: guardianId,
+      password,
+    });
+  }
+  for (const femaleParticipantId of femaleParticipantIds) {
+    const [existing] = await db
+      .select({ id: guardianships.id })
+      .from(guardianships)
+      .where(and(eq(guardianships.femaleParticipantId, femaleParticipantId), eq(guardianships.guardianId, guardianId)))
+      .limit(1);
+    if (existing) {
+      await db.update(guardianships).set({ relationship: "Wali data test", status: "approved", verifiedAt: new Date() }).where(eq(guardianships.id, existing.id));
+    } else {
+      await db.insert(guardianships).values({
+        femaleParticipantId,
+        guardianId,
+        relationship: "Wali data test",
+        status: "approved",
+        verifiedAt: new Date(),
+      });
+    }
+  }
+  if (femaleParticipantIds.length > 0) {
+    await db.update(taarufProcesses)
+      .set({ guardianId, updatedAt: new Date() })
+      .where(and(
+        inArray(taarufProcesses.femaleParticipantId, femaleParticipantIds),
+        isNull(taarufProcesses.guardianId),
+        inArray(taarufProcesses.status, ["awaiting_recipient", "istikharah"]),
+      ));
+  }
+  return { email, password: passwordValue, displayCode: "TEST-WALI-001" };
+}
+
 async function main() {
   const seeded: Array<Awaited<ReturnType<typeof seedParticipant>>> = [];
   for (const participant of participants) seeded.push(await seedParticipant(participant));
+  const guardian = await seedTestGuardian(seeded.filter((participant) => participant.role === "participant_female").map((participant) => participant.userId));
   await db.delete(recommendations).where(eq(recommendations.source, "test_seed"));
 
-  process.stdout.write(`Seed data test selesai: ${seeded.map((participant) => participant.displayCode).join(", ")}.\n`);
+  process.stdout.write(`Seed data test selesai: ${seeded.map((participant) => participant.displayCode).join(", ")}; ${guardian.displayCode}.\n`);
 }
 
 main().catch((error) => {

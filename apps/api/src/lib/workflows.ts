@@ -219,6 +219,17 @@ export async function decideProposal(
         type: `recipient.${decision}`,
         payload: {},
       });
+    await tx.insert(notifications).values({
+      userId: process.proposerId,
+      type: `proposal.${decision}`,
+      title: decision === "reject" ? "Pengajuan tidak dilanjutkan" : decision === "istikharah" ? "Calon memilih istikharah" : "Calon bersedia melanjutkan",
+      body: decision === "reject"
+        ? "Proses ditutup dengan baik. Anda dapat kembali meninjau rekomendasi setelah masa jeda."
+        : decision === "istikharah"
+          ? "Calon membutuhkan waktu untuk istikharah sebelum memberikan keputusan."
+          : "Persetujuan calon tercatat. Proses berikutnya menunggu keputusan wali.",
+      href: "/dashboard/proses",
+    });
     return { status: decision };
   });
 }
@@ -301,6 +312,76 @@ export async function decideGuardian(
         type: `guardian.${decision}`,
         payload: {},
       });
+    await tx.insert(notifications).values([
+      {
+        userId: process.maleParticipantId,
+        type: `guardian.${decision}`,
+        title: decision === "accept" ? "Wali menyetujui proses" : "Wali tidak menyetujui proses",
+        body: decision === "accept" ? "Ta’aruf kini aktif dan akan dilanjutkan bersama mediator." : "Proses ditutup sesuai keputusan wali.",
+        href: "/dashboard/proses",
+      },
+      {
+        userId: process.femaleParticipantId,
+        type: `guardian.${decision}`,
+        title: decision === "accept" ? "Wali menyetujui proses" : "Wali tidak menyetujui proses",
+        body: decision === "accept" ? "Ta’aruf kini aktif dan akan dilanjutkan bersama mediator." : "Proses ditutup sesuai keputusan wali.",
+        href: "/dashboard/proses",
+      },
+    ]);
     return { status: nextStatus };
+  });
+}
+
+export async function withdrawProcess(
+  actorId: string,
+  processId: string,
+  reason: string,
+) {
+  return db.transaction(async (tx) => {
+    const [process] = await tx
+      .select()
+      .from(taarufProcesses)
+      .where(eq(taarufProcesses.id, processId))
+      .limit(1);
+    if (
+      !process ||
+      ![process.maleParticipantId, process.femaleParticipantId].includes(actorId) ||
+      ["closed", "withdrawn", "expired", "married"].includes(process.status)
+    ) throw new Error("INVALID_WITHDRAWAL");
+
+    await tx
+      .update(taarufProcesses)
+      .set({
+        status: "withdrawn",
+        closedReason: reason,
+        deadlineAt: null,
+        archiveUntil: new Date(Date.now() + 365 * 86400000),
+        updatedAt: new Date(),
+      })
+      .where(eq(taarufProcesses.id, processId));
+    await tx.insert(processEvents).values({
+      processId,
+      actorId,
+      type: "process.withdrawn",
+      payload: { reason },
+    });
+    const otherParticipantId = process.maleParticipantId === actorId
+      ? process.femaleParticipantId
+      : process.maleParticipantId;
+    await tx.insert(notifications).values({
+      userId: otherParticipantId,
+      type: "process.withdrawn",
+      title: "Proses ta’aruf telah ditutup",
+      body: "Pihak lain memilih tidak melanjutkan proses. Data tetap dijaga dan komunikasi tidak dibuka.",
+      href: "/dashboard/proses",
+    });
+    await tx.insert(auditLogs).values({
+      actorId,
+      action: "process.withdrawn",
+      targetType: "taaruf_process",
+      targetId: processId,
+      metadata: { reason },
+    });
+    return { status: "withdrawn" as const };
   });
 }

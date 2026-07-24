@@ -13,10 +13,10 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { allowedOrigins, env, googleOAuthEnabled } from "@/config";
 import { db } from "@/db/index";
-import { auditLogs, documents, jobs, moderationCases, notifications, partnerPreferences, platformSettings, profileSections, profiles, recommendations, taarufProcesses, users } from "@/db/schema";
+import { auditLogs, documents, jobs, moderationCases, notifications, partnerPreferences, platformSettings, processEvents, profileSections, profiles, recommendations, taarufProcesses, users } from "@/db/schema";
 import { decryptBuffer, decryptJson, encryptBuffer, encryptJson } from "@/lib/crypto";
 import { profileFormSections, requiredProfileSectionKeys, sensitiveSectionKeys } from "@/lib/profile-form";
-import { createProposal } from "@/lib/workflows";
+import { createProposal, decideGuardian, decideProposal, withdrawProcess } from "@/lib/workflows";
 import { getSession } from "@/session";
 
 const app = express();
@@ -546,6 +546,150 @@ app.post("/api/proposals", asyncRoute(async (req, res) => {
       PENDING_PROPOSAL_LIMIT: "Batas pengajuan yang masih menunggu sudah tercapai.",
     };
     res.status(409).json({ error: { code, message: messages[code] ?? "Pengajuan belum dapat dibuat." } });
+  }
+}));
+
+app.get("/api/processes", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  const isParticipant = session.user.role.startsWith("participant_");
+  const isGuardian = session.user.role === "guardian";
+  if (!isParticipant && !isGuardian) {
+    return void res.status(403).json({ error: { code: "FORBIDDEN", message: "Ruang proses ini tidak tersedia untuk peran Anda." } });
+  }
+  const scope = isParticipant
+    ? or(eq(taarufProcesses.maleParticipantId, session.user.id), eq(taarufProcesses.femaleParticipantId, session.user.id))
+    : eq(taarufProcesses.guardianId, session.user.id);
+  const rows = await db
+    .select()
+    .from(taarufProcesses)
+    .where(scope)
+    .orderBy(desc(taarufProcesses.createdAt))
+    .limit(50);
+  const participantIds = [...new Set(rows.flatMap((row) => [row.maleParticipantId, row.femaleParticipantId]))];
+  const participantRows = participantIds.length > 0
+    ? await db
+      .select({
+        id: users.id,
+        displayCode: users.displayCode,
+        role: users.role,
+        birthDate: profiles.birthDate,
+        province: profiles.province,
+        city: profiles.city,
+      })
+      .from(users)
+      .leftJoin(profiles, eq(profiles.userId, users.id))
+      .where(inArray(users.id, participantIds))
+    : [];
+  const processIds = rows.map((row) => row.id);
+  const eventRows = processIds.length > 0
+    ? await db
+      .select({
+        id: processEvents.id,
+        processId: processEvents.processId,
+        type: processEvents.type,
+        createdAt: processEvents.createdAt,
+      })
+      .from(processEvents)
+      .where(inArray(processEvents.processId, processIds))
+      .orderBy(processEvents.createdAt)
+    : [];
+  const participantMap = new Map(participantRows.map((row) => [row.id, {
+    id: row.id,
+    displayCode: row.displayCode,
+    role: row.role,
+    ageBand: ageBand(row.birthDate),
+    province: row.province,
+    city: row.city,
+  }]));
+  const data = rows.map((row) => {
+    const male = participantMap.get(row.maleParticipantId) ?? null;
+    const female = participantMap.get(row.femaleParticipantId) ?? null;
+    const counterpart = isParticipant
+      ? participantMap.get(row.maleParticipantId === session.user.id ? row.femaleParticipantId : row.maleParticipantId) ?? null
+      : male;
+    const direction = isGuardian
+      ? "guardian"
+      : row.proposerId === session.user.id
+        ? "outgoing"
+        : "incoming";
+    const canDecide = direction === "incoming" && ["awaiting_recipient", "istikharah"].includes(row.status);
+    const canGuardianDecide = direction === "guardian" && row.status === "awaiting_guardian";
+    return {
+      id: row.id,
+      status: row.status,
+      direction,
+      deadlineAt: row.deadlineAt,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      closedReason: row.closedReason,
+      canDecide,
+      canGuardianDecide,
+      canWithdraw: isParticipant && !["closed", "withdrawn", "expired", "married"].includes(row.status),
+      counterpart,
+      male,
+      female,
+      events: eventRows.filter((event) => event.processId === row.id).map((event) => ({
+        id: event.id,
+        type: event.type,
+        createdAt: event.createdAt,
+      })),
+    };
+  });
+  res.json({ data });
+}));
+
+app.post("/api/processes/:id/decision", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  const processId = String(req.params.id);
+  const parsed = z.object({ decision: z.enum(["accept", "reject", "istikharah"]) }).safeParse(req.body);
+  if (!parsed.success || !z.string().uuid().safeParse(processId).success) {
+    return void res.status(400).json({ error: { code: "INVALID_DECISION", message: "Keputusan tidak valid." } });
+  }
+  try {
+    const result = await decideProposal(session.user.id, processId, parsed.data.decision, "sop-taaruf-1.0");
+    res.json({ data: result });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "DECISION_FAILED";
+    const message = code === "GUARDIAN_NOT_VERIFIED"
+      ? "Wali belum terverifikasi. Hubungi admin agar wali dapat dikonfirmasi sebelum melanjutkan."
+      : "Keputusan tidak dapat diproses atau statusnya sudah berubah.";
+    res.status(409).json({ error: { code, message } });
+  }
+}));
+
+app.post("/api/processes/:id/guardian-decision", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  const processId = String(req.params.id);
+  const parsed = z.object({ decision: z.enum(["accept", "reject"]) }).safeParse(req.body);
+  if (!parsed.success || !z.string().uuid().safeParse(processId).success) {
+    return void res.status(400).json({ error: { code: "INVALID_GUARDIAN_DECISION", message: "Keputusan wali tidak valid." } });
+  }
+  try {
+    const result = await decideGuardian(session.user.id, processId, parsed.data.decision, "sop-taaruf-1.0");
+    res.json({ data: result });
+  } catch {
+    res.status(409).json({ error: { code: "INVALID_GUARDIAN_DECISION", message: "Keputusan wali tidak dapat diproses atau statusnya sudah berubah." } });
+  }
+}));
+
+app.post("/api/processes/:id/withdraw", asyncRoute(async (req, res) => {
+  const session = await requireUser(req, res);
+  if (!session) return;
+  const processId = String(req.params.id);
+  const parsed = z.object({
+    reason: z.enum(["Tidak menemukan kecocokan", "Keluarga atau wali belum menyetujui", "Belum siap melanjutkan", "Ada informasi baru", "Alasan pribadi", "Merasa tidak aman"]),
+  }).safeParse(req.body);
+  if (!parsed.success || !z.string().uuid().safeParse(processId).success) {
+    return void res.status(400).json({ error: { code: "INVALID_WITHDRAWAL", message: "Alasan penutupan proses tidak valid." } });
+  }
+  try {
+    const result = await withdrawProcess(session.user.id, processId, parsed.data.reason);
+    res.json({ data: result });
+  } catch {
+    res.status(409).json({ error: { code: "INVALID_WITHDRAWAL", message: "Proses tidak dapat ditutup atau statusnya sudah berubah." } });
   }
 }));
 

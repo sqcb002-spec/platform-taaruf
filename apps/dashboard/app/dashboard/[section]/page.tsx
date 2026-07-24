@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, BellRing, BookOpen, BriefcaseBusiness, CalendarDays, Check, ChevronLeft, ChevronRight, EyeOff, FileText, Filter, GraduationCap, HeartHandshake, LoaderCircle, LockKeyhole, LogOut, MapPin, RefreshCw, Search, ShieldCheck, Sparkles, UserRoundCheck, X } from "lucide-react";
+import { ArrowRight, BellRing, BookOpen, BriefcaseBusiness, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, EyeOff, FileText, Filter, GraduationCap, HeartHandshake, Hourglass, LoaderCircle, LockKeyhole, LogOut, MapPin, RefreshCw, Search, Send, ShieldCheck, Sparkles, UserRoundCheck, X } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { apiFetch, apiUrl } from "@/lib/api-client";
 import { navForRole, sectionCopy } from "@/lib/dashboard-config";
@@ -435,6 +435,185 @@ function RecommendationModule() {
   </section>;
 }
 
+type ProcessParticipant = {
+  id: string;
+  displayCode: string;
+  role: AppRole;
+  ageBand: string;
+  province: string | null;
+  city: string | null;
+};
+
+type TaarufProcess = {
+  id: string;
+  status: string;
+  direction: "incoming" | "outgoing" | "guardian";
+  deadlineAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  closedReason: string | null;
+  canDecide: boolean;
+  canGuardianDecide: boolean;
+  canWithdraw: boolean;
+  counterpart: ProcessParticipant | null;
+  male: ProcessParticipant | null;
+  female: ProcessParticipant | null;
+  events: Array<{ id: string; type: string; createdAt: string }>;
+};
+
+const processStages = [
+  { key: "proposal", label: "Pengajuan", statuses: ["awaiting_recipient", "istikharah"] },
+  { key: "guardian", label: "Persetujuan wali", statuses: ["awaiting_guardian"] },
+  { key: "active", label: "Ta’aruf aktif", statuses: ["active_taaruf", "structured_dialogue", "reference_check"] },
+  { key: "nazhor", label: "Nazhor", statuses: ["nazhor_scheduling", "nazhor"] },
+  { key: "khitbah", label: "Khitbah", statuses: ["khitbah", "preparing_marriage", "married"] },
+];
+
+const processCopy: Record<string, { label: string; detail: string }> = {
+  awaiting_recipient: { label: "Menunggu keputusan calon", detail: "Pengajuan sudah tercatat. Biodata terbatas sedang ditinjau oleh calon." },
+  istikharah: { label: "Masa istikharah", detail: "Calon meminta waktu untuk istikharah sebelum memberikan keputusan." },
+  awaiting_guardian: { label: "Menunggu persetujuan wali", detail: "Kedua peserta bersedia melanjutkan. Wali akhwat sedang diminta memberi keputusan." },
+  active_taaruf: { label: "Ta’aruf aktif", detail: "Persetujuan lengkap. Proses terarah bersama mediator dapat dimulai." },
+  structured_dialogue: { label: "Dialog terarah", detail: "Pertanyaan penting dibahas secara tertib melalui mediator." },
+  reference_check: { label: "Pemeriksaan referensi", detail: "Referensi yang disetujui sedang diperiksa sesuai kewenangan." },
+  nazhor_scheduling: { label: "Menentukan jadwal nazhor", detail: "Jadwal dan pendamping nazhor sedang disepakati." },
+  nazhor: { label: "Tahap nazhor", detail: "Pertemuan nazhor berlangsung sesuai pendampingan dan batas yang ditetapkan." },
+  khitbah: { label: "Khitbah", detail: "Kedua keluarga memasuki tahap keseriusan menuju akad." },
+  preparing_marriage: { label: "Persiapan akad", detail: "Proses sedang menuju penyelesaian pernikahan." },
+  married: { label: "Selesai menikah", detail: "Alhamdulillah, proses telah selesai sampai pernikahan." },
+  withdrawn: { label: "Proses dihentikan", detail: "Salah satu pihak memilih tidak melanjutkan dengan baik." },
+  expired: { label: "Tenggat berakhir", detail: "Proses ditutup karena tidak ada respons sampai batas waktu." },
+  closed: { label: "Proses ditutup", detail: "Proses telah selesai dan tersimpan sebagai riwayat." },
+};
+
+function formatProcessDate(value: string | null) {
+  if (!value) return "Tidak ada tenggat";
+  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+
+function processStageIndex(status: string) {
+  if (["closed", "withdrawn", "expired"].includes(status)) return 0;
+  const index = processStages.findIndex((stage) => stage.statuses.includes(status));
+  return index < 0 ? 0 : index;
+}
+
+function ProcessModule({ role }: { role: AppRole }) {
+  const [items, setItems] = useState<TaarufProcess[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState("");
+  const [message, setMessage] = useState("");
+  const [reload, setReload] = useState(0);
+  const [confirmReject, setConfirmReject] = useState<string | null>(null);
+  const [withdrawReason, setWithdrawReason] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    apiFetch<TaarufProcess[]>("/api/processes", { signal: controller.signal })
+      .then(setItems)
+      .catch((reason) => { if (reason?.name !== "AbortError") setError(reason instanceof Error ? reason.message : "Proses belum dapat dimuat."); })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [reload]);
+
+  const act = async (item: TaarufProcess, kind: "accept" | "reject" | "istikharah" | "guardian-accept" | "guardian-reject" | "withdraw") => {
+    setBusy(`${item.id}:${kind}`);
+    setMessage("");
+    try {
+      const path = kind.startsWith("guardian-")
+        ? `/api/processes/${item.id}/guardian-decision`
+        : kind === "withdraw"
+          ? `/api/processes/${item.id}/withdraw`
+          : `/api/processes/${item.id}/decision`;
+      const body = kind === "withdraw"
+        ? { reason: withdrawReason[item.id] || "Alasan pribadi" }
+        : { decision: kind.replace("guardian-", "") };
+      await apiFetch(path, { method: "POST", body: JSON.stringify(body) });
+      setMessage(kind === "withdraw" ? "Proses telah ditutup dengan baik." : "Keputusan berhasil dicatat.");
+      setConfirmReject(null);
+      setReload((value) => value + 1);
+      window.dispatchEvent(new Event("dashboard:profile-updated"));
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "Tindakan belum dapat diproses.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  if (loading) return <section className="process-loading"><div className="skeleton process-skeleton-main" /><div className="skeleton process-skeleton-card" /><p><LoaderCircle className="spin" /> Menyusun status proses…</p></section>;
+  if (error) return <section className="dashboard-error"><ShieldCheck /><h2>Proses belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section>;
+
+  const active = items.filter((item) => !["closed", "withdrawn", "expired", "married"].includes(item.status));
+  const history = items.filter((item) => ["closed", "withdrawn", "expired", "married"].includes(item.status));
+  const actionCount = items.filter((item) => item.canDecide || item.canGuardianDecide).length;
+  const isGuardian = role === "guardian";
+
+  return <section className="process-space">
+    <div className="process-overview">
+      <div><p className="mono">{isGuardian ? "AMANAH WALI" : "STATUS TERKINI"}</p><h2>{actionCount > 0 ? `${actionCount} keputusan menunggu Anda.` : active.length > 0 ? "Proses sedang berjalan dengan tertib." : "Belum ada proses aktif."}</h2><p>{isGuardian ? "Keputusan wali terpisah dari keputusan akhwat dan selalu tercatat." : "Tidak ada chat bebas. Setiap langkah dibuka setelah persetujuan pada tahap sebelumnya selesai."}</p></div>
+      <div className="process-overview-stats">
+        <span><strong>{active.length}</strong><small>berjalan</small></span>
+        <span><strong>{actionCount}</strong><small>perlu tindakan</small></span>
+        <span><strong>{history.length}</strong><small>riwayat</small></span>
+      </div>
+    </div>
+    {message ? <div className="process-flash" role="status"><Check /> {message}</div> : null}
+
+    {active.length > 0 ? <div className="process-list">
+      {active.map((item, index) => {
+        const copy = processCopy[item.status] ?? { label: item.status.replaceAll("_", " "), detail: "Status proses sedang diperbarui." };
+        const counterpart = item.counterpart;
+        const stageIndex = processStageIndex(item.status);
+        return <article className={`process-card ${item.canDecide || item.canGuardianDecide ? "needs-action" : ""}`} style={{ "--process-delay": `${index * 65}ms` } as React.CSSProperties} key={item.id}>
+          <header>
+            <div className="process-person">
+              <span>{counterpart?.role === "participant_female" ? "A" : "I"}</span>
+              <div><p>{item.direction === "outgoing" ? "PENGAJUAN DIKIRIM" : item.direction === "incoming" ? "PENGAJUAN MASUK" : "PERSETUJUAN WALI"}</p><h3>{counterpart?.displayCode || "Kode peserta"}</h3><small>{[counterpart?.ageBand, counterpart?.city || counterpart?.province].filter(Boolean).join(" · ")}</small></div>
+            </div>
+            <em className={`process-status status-${item.status}`}>{copy.label}</em>
+          </header>
+          <div className="process-current">
+            {item.status === "istikharah" ? <Hourglass /> : item.direction === "outgoing" ? <Send /> : <HeartHandshake />}
+            <div><strong>{copy.label}</strong><p>{item.direction === "incoming" && item.status === "awaiting_recipient" ? "Tinjau dengan tenang. Memilih istikharah tidak membuka komunikasi atau foto." : copy.detail}</p></div>
+          </div>
+          <div className="process-deadline"><Clock3 /><span><small>Tenggat tahap ini</small><strong>{formatProcessDate(item.deadlineAt)}</strong></span></div>
+          <ol className="process-timeline" aria-label="Tahapan proses ta’aruf">
+            {processStages.map((stage, stagePosition) => <li key={stage.key} className={stagePosition < stageIndex ? "done" : stagePosition === stageIndex ? "current" : ""}><span>{stagePosition < stageIndex ? <Check /> : stagePosition + 1}</span><small>{stage.label}</small></li>)}
+          </ol>
+
+          {item.canDecide ? <div className="process-actions">
+            <div><strong>Keputusan Anda</strong><p>Persetujuan ini milik Anda sendiri dan tidak dapat digantikan wali atau admin.</p></div>
+            <div className="process-action-grid">
+              <button className="process-accept" disabled={Boolean(busy)} onClick={() => act(item, "accept")}>{busy === `${item.id}:accept` ? <LoaderCircle className="spin" /> : <Check />} Tertarik lanjut</button>
+              <button className="process-wait" disabled={Boolean(busy)} onClick={() => act(item, "istikharah")}>{busy === `${item.id}:istikharah` ? <LoaderCircle className="spin" /> : <Hourglass />} Istikharah</button>
+              <button className="process-reject" disabled={Boolean(busy)} onClick={() => setConfirmReject(item.id)}>Tidak melanjutkan</button>
+            </div>
+            {confirmReject === item.id ? <div className="process-confirm"><p>Yakin tidak melanjutkan? Keputusan akan menutup pengajuan ini tanpa memberi label pelanggaran.</p><button onClick={() => setConfirmReject(null)}>Kembali</button><button disabled={Boolean(busy)} onClick={() => act(item, "reject")}>Ya, tutup proses</button></div> : null}
+          </div> : null}
+
+          {item.canGuardianDecide ? <div className="process-actions guardian-actions">
+            <div><strong>Keputusan wali diperlukan</strong><p>Pastikan identitas calon dan versi SOP telah dipahami sebelum memberi keputusan.</p></div>
+            <div className="process-action-grid two">
+              <button className="process-accept" disabled={Boolean(busy)} onClick={() => act(item, "guardian-accept")}><Check /> Setujui proses</button>
+              <button className="process-reject" disabled={Boolean(busy)} onClick={() => act(item, "guardian-reject")}>Tidak menyetujui</button>
+            </div>
+          </div> : null}
+
+          {item.canWithdraw && !item.canDecide ? <details className="process-withdraw">
+            <summary>Perlu menghentikan proses?</summary>
+            <div><label htmlFor={`withdraw-${item.id}`}>Alasan</label><select id={`withdraw-${item.id}`} value={withdrawReason[item.id] || "Alasan pribadi"} onChange={(event) => setWithdrawReason((value) => ({ ...value, [item.id]: event.target.value }))}><option>Tidak menemukan kecocokan</option><option>Keluarga atau wali belum menyetujui</option><option>Belum siap melanjutkan</option><option>Ada informasi baru</option><option>Alasan pribadi</option><option>Merasa tidak aman</option></select><button disabled={Boolean(busy)} onClick={() => act(item, "withdraw")}>Tutup proses dengan baik</button></div>
+          </details> : null}
+          <footer><span>Dimulai {formatProcessDate(item.createdAt)}</span><Link href="/dashboard/panduan" prefetch={false}>Apa langkah berikutnya? <ArrowRight /></Link></footer>
+        </article>;
+      })}
+    </div> : <div className="process-empty"><HeartHandshake /><h3>{isGuardian ? "Belum ada permintaan persetujuan." : "Belum ada proses yang berjalan."}</h3><p>{isGuardian ? "Permintaan akan muncul setelah akhwat menyatakan tertarik kepada calon tertentu." : "Pengajuan yang Anda kirim atau terima akan langsung muncul di halaman ini."}</p>{!isGuardian ? <Link className="app-primary" href="/dashboard/rekomendasi" prefetch={false}>Lihat rekomendasi</Link> : null}</div>}
+
+    {history.length > 0 ? <details className="process-history"><summary><span><Clock3 /><strong>Riwayat proses</strong></span><small>{history.length} tersimpan</small></summary><div>{history.map((item) => <article key={item.id}><div><strong>{item.counterpart?.displayCode || "Kode peserta"}</strong><small>{processCopy[item.status]?.label || item.status}</small></div><span>{formatProcessDate(item.updatedAt)}</span></article>)}</div></details> : null}
+  </section>;
+}
+
 const questionSectionKeys = ["self", "religion", "marriage", "future", "partner_questions", "criteria_nonphysical", "references", "emotion", "lifestyle", "life_story", "education", "experience", "family_details", "criteria_physical"] as const;
 const essentialQuestionKeys = ["self", "religion", "marriage", "future", "partner_questions", "criteria_nonphysical", "references"] as const;
 const optionalQuestionKeys = ["emotion", "lifestyle", "life_story", "education", "experience", "family_details", "criteria_physical"] as const;
@@ -665,7 +844,7 @@ export default function DashboardSectionPage() {
 
   return <>
     {section === "biodata" && !baseComplete ? <OnboardingProgress activeGroup={activeGroup} completed={completed} percent={percent} /> : null}
-    {section !== "biodata" ? <header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}><FileText /> Lihat panduan</Link></header> : null}
-    {section !== "biodata" ? section === "peserta" ? <ParticipantDirectory /> : section === "rekomendasi" && user?.role.startsWith("participant_") ? <RecommendationModule /> : section === "panduan" ? <ParticipantGuide /> : section === "pengaturan" ? <ParticipantSettings user={user} /> : <QueueModule section={section} /> : loading ? <section className="dashboard-loading"><div className="skeleton skeleton-panel" /><p><LoaderCircle className="spin" /> Memuat progres biodata…</p></section> : error ? <section className="dashboard-error"><ShieldCheck /><h2>Progres biodata belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section> : showBiodataHub ? <BiodataHub completed={completed} /> : <div className="biodata-layout"><aside className="section-progress"><div><strong>{percent}%</strong><span>{completed.size} bagian tersimpan</span></div></aside><section className="form-card"><header><div><p className="mono">{baseComplete ? "EDIT BIODATA" : `LANGKAH ${onboardingGroups.findIndex((group) => group.sections.includes(definition.key)) + 1}`}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header>{user ? <ProfileForm sectionKey={definition.key} role={user.role} onSaved={() => setReload((value) => value + 1)} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section></div>}
+    {section !== "biodata" && section !== "proses" && section !== "persetujuan" ? <header className="module-heading"><div><p className="mono">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.body}</p></div><Link href="/dashboard/panduan" className="app-secondary" prefetch={false}><FileText /> Lihat panduan</Link></header> : null}
+    {section !== "biodata" ? section === "peserta" ? <ParticipantDirectory /> : section === "rekomendasi" && user?.role.startsWith("participant_") ? <RecommendationModule /> : section === "proses" && user?.role.startsWith("participant_") ? <ProcessModule role={user.role} /> : section === "persetujuan" && user?.role === "guardian" ? <ProcessModule role={user.role} /> : section === "panduan" ? <ParticipantGuide /> : section === "pengaturan" ? <ParticipantSettings user={user} /> : <QueueModule section={section} /> : loading ? <section className="dashboard-loading"><div className="skeleton skeleton-panel" /><p><LoaderCircle className="spin" /> Memuat progres biodata…</p></section> : error ? <section className="dashboard-error"><ShieldCheck /><h2>Progres biodata belum dapat dimuat.</h2><p>{error}</p><button className="app-primary" onClick={() => setReload((value) => value + 1)}><RefreshCw /> Coba lagi</button></section> : showBiodataHub ? <BiodataHub completed={completed} /> : <div className="biodata-layout"><aside className="section-progress"><div><strong>{percent}%</strong><span>{completed.size} bagian tersimpan</span></div></aside><section className="form-card"><header><div><p className="mono">{baseComplete ? "EDIT BIODATA" : `LANGKAH ${onboardingGroups.findIndex((group) => group.sections.includes(definition.key)) + 1}`}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header>{user ? <ProfileForm sectionKey={definition.key} role={user.role} onSaved={() => setReload((value) => value + 1)} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section></div>}
   </>;
 }

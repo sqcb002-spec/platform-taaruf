@@ -3797,6 +3797,683 @@
   }
 }
 
+.process-space {
+  min-width: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.process-overview {
+  position: relative;
+  min-width: 0;
+  padding: 1.2rem;
+  display: grid;
+  gap: 1.1rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 24%, var(--color-rule));
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at 92% 10%, color-mix(in srgb, var(--color-accent) 16%, transparent) 0, transparent 35%),
+    var(--portal-card-gradient);
+  box-shadow: 0 1rem 2.8rem color-mix(in srgb, var(--color-ink) 7%, transparent);
+}
+
+.process-overview::after {
+  content: "ت";
+  position: absolute;
+  right: -0.5rem;
+  bottom: -2.3rem;
+  color: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  font: 700 9rem/1 var(--font-display);
+  pointer-events: none;
+}
+
+.process-overview > div:first-child {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.process-overview .mono {
+  margin: 0 0 0.45rem;
+  color: var(--color-accent-deep);
+  font-size: 0.53rem;
+}
+
+.process-overview h2 {
+  max-width: 18ch;
+  margin: 0;
+  font-size: clamp(1.55rem, 7vw, 2.65rem);
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+}
+
+.process-overview p:not(.mono) {
+  max-width: 42rem;
+  margin: 0.65rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+.process-overview-stats {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-rule));
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-paper) 76%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.process-overview-stats span {
+  min-width: 0;
+  padding: 0.75rem 0.45rem;
+  display: grid;
+  justify-items: center;
+  border-right: 1px solid var(--color-rule);
+}
+
+.process-overview-stats span:last-child {
+  border-right: 0;
+}
+
+.process-overview-stats strong {
+  color: var(--color-accent-deep);
+  font-size: 1.3rem;
+}
+
+.process-overview-stats small {
+  color: var(--color-muted);
+  font-size: 0.5rem;
+  text-align: center;
+}
+
+.process-list {
+  min-width: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.process-card {
+  --process-delay: 0ms;
+  position: relative;
+  min-width: 0;
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--color-rule);
+  border-radius: 1.3rem;
+  background: var(--portal-card-gradient);
+  box-shadow: 0 0.7rem 2rem color-mix(in srgb, var(--color-ink) 6%, transparent);
+  animation: process-card-in 480ms var(--ease-out) var(--process-delay) both;
+  transition: border-color 180ms var(--ease-out), transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out);
+}
+
+.process-card.needs-action {
+  border-color: color-mix(in srgb, var(--color-accent) 52%, var(--color-rule));
+  box-shadow: 0 1rem 2.6rem color-mix(in srgb, var(--color-accent) 11%, transparent);
+}
+
+.process-card > header {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.process-person {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.process-person > span {
+  width: 2.85rem;
+  height: 2.85rem;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 0.9rem;
+  background: var(--portal-accent-gradient);
+  color: var(--color-accent-ink);
+  font: 800 0.85rem var(--font-display);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, white 16%, transparent);
+}
+
+.process-person div {
+  min-width: 0;
+}
+
+.process-person p,
+.process-person h3,
+.process-person small {
+  margin: 0;
+}
+
+.process-person p {
+  color: var(--color-accent-deep);
+  font: 0.48rem var(--font-label);
+  letter-spacing: 0.04em;
+}
+
+.process-person h3 {
+  margin-top: 0.2rem;
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.process-person small {
+  margin-top: 0.2rem;
+  display: block;
+  color: var(--color-muted);
+  font-size: 0.58rem;
+  line-height: 1.35;
+}
+
+.process-status {
+  max-width: 9rem;
+  padding: 0.38rem 0.55rem;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 22%, var(--color-rule));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-accent) 7%, var(--color-paper));
+  color: var(--color-accent-deep);
+  font: 700 0.49rem/1.3 var(--font-body);
+  text-align: center;
+}
+
+.process-current {
+  min-width: 0;
+  padding: 0.9rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 18%, var(--color-rule));
+  border-radius: 1rem;
+  background: var(--portal-soft-gradient);
+}
+
+.process-current > svg {
+  width: 1.15rem;
+  flex: 0 0 auto;
+  color: var(--color-accent-deep);
+}
+
+.process-current strong {
+  display: block;
+  font-size: 0.75rem;
+}
+
+.process-current p {
+  margin: 0.25rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.65rem;
+  line-height: 1.55;
+}
+
+.process-deadline {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.process-deadline > svg {
+  width: 1rem;
+  color: var(--color-accent-deep);
+}
+
+.process-deadline span,
+.process-deadline small,
+.process-deadline strong {
+  display: block;
+}
+
+.process-deadline small {
+  color: var(--color-muted);
+  font-size: 0.52rem;
+}
+
+.process-deadline strong {
+  margin-top: 0.12rem;
+  font-size: 0.68rem;
+}
+
+.process-timeline {
+  min-width: 0;
+  margin: 0;
+  padding: 0.2rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  list-style: none;
+}
+
+.process-timeline li {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  color: color-mix(in srgb, var(--color-muted) 65%, transparent);
+  text-align: center;
+}
+
+.process-timeline li::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 0.78rem;
+  left: -50%;
+  width: 100%;
+  height: 1px;
+  background: var(--color-rule);
+}
+
+.process-timeline li:first-child::before {
+  display: none;
+}
+
+.process-timeline li > span {
+  position: relative;
+  z-index: 1;
+  width: 1.55rem;
+  height: 1.55rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-rule);
+  border-radius: 50%;
+  background: var(--color-paper);
+  font: 700 0.52rem var(--font-body);
+}
+
+.process-timeline li > span svg {
+  width: 0.7rem;
+}
+
+.process-timeline li small {
+  max-width: 6rem;
+  font-size: 0.46rem;
+  line-height: 1.3;
+}
+
+.process-timeline li.done,
+.process-timeline li.current {
+  color: var(--color-accent-deep);
+}
+
+.process-timeline li.done::before,
+.process-timeline li.current::before {
+  background: color-mix(in srgb, var(--color-accent) 50%, var(--color-rule));
+}
+
+.process-timeline li.done > span,
+.process-timeline li.current > span {
+  border-color: var(--color-accent);
+  background: var(--portal-accent-gradient);
+  color: var(--color-accent-ink);
+}
+
+.process-timeline li.current > span {
+  box-shadow: 0 0 0 0.35rem color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.process-actions {
+  padding: 0.95rem;
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, var(--color-rule));
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-paper));
+}
+
+.process-actions > div:first-child strong {
+  font-size: 0.76rem;
+}
+
+.process-actions > div:first-child p {
+  margin: 0.25rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+
+.process-action-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.process-action-grid button,
+.process-confirm button,
+.process-withdraw button {
+  min-height: 2.75rem;
+  padding: 0.65rem 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 0.8rem;
+  font: 750 0.65rem var(--font-body);
+  cursor: pointer;
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out), border-color 180ms var(--ease-out);
+}
+
+.process-action-grid button svg {
+  width: 0.85rem;
+}
+
+.process-accept {
+  border: 0;
+  background: var(--portal-accent-gradient);
+  color: var(--color-accent-ink);
+  box-shadow: 0 0.5rem 1rem color-mix(in srgb, var(--color-accent) 16%, transparent);
+}
+
+.process-wait {
+  border: 1px solid var(--color-rule);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.process-reject {
+  border: 1px solid color-mix(in srgb, #b42318 20%, var(--color-rule));
+  background: color-mix(in srgb, #b42318 4%, var(--color-paper));
+  color: #8f1d14;
+}
+
+.process-confirm {
+  padding-top: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  border-top: 1px dashed var(--color-rule);
+}
+
+.process-confirm p {
+  grid-column: 1 / -1;
+  margin: 0 0 0.25rem;
+  color: #7a251c;
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+
+.process-confirm button:first-of-type {
+  border: 1px solid var(--color-rule);
+  background: var(--color-paper);
+}
+
+.process-confirm button:last-of-type {
+  border: 0;
+  background: #8f1d14;
+  color: white;
+}
+
+.process-withdraw {
+  border-top: 1px dashed var(--color-rule);
+}
+
+.process-withdraw summary {
+  padding-top: 0.8rem;
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  cursor: pointer;
+}
+
+.process-withdraw > div {
+  padding-top: 0.75rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.process-withdraw label {
+  font-size: 0.58rem;
+}
+
+.process-withdraw select {
+  width: 100%;
+  min-height: 2.8rem;
+  padding: 0.65rem;
+  border: 1px solid var(--color-rule);
+  border-radius: 0.75rem;
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.process-withdraw button {
+  border: 1px solid color-mix(in srgb, #b42318 18%, var(--color-rule));
+  background: transparent;
+  color: #8f1d14;
+}
+
+.process-card > footer {
+  padding-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid var(--color-rule);
+  color: var(--color-muted);
+  font-size: 0.54rem;
+}
+
+.process-card > footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-accent-deep);
+  font-weight: 700;
+}
+
+.process-card > footer a svg {
+  width: 0.72rem;
+}
+
+.process-flash {
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid color-mix(in srgb, #14804a 20%, var(--color-rule));
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, #14804a 7%, var(--color-paper));
+  color: #0f6b3d;
+  font-size: 0.65rem;
+}
+
+.process-flash svg {
+  width: 0.9rem;
+}
+
+.process-empty {
+  min-height: 20rem;
+  padding: 2rem 1.2rem;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.7rem;
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 32%, var(--color-rule));
+  border-radius: 1.3rem;
+  background: var(--portal-card-gradient);
+  text-align: center;
+}
+
+.process-empty > svg {
+  width: 2.2rem;
+  color: var(--color-accent);
+}
+
+.process-empty h3,
+.process-empty p {
+  margin: 0;
+}
+
+.process-empty h3 {
+  font-size: 1.2rem;
+}
+
+.process-empty p {
+  max-width: 32rem;
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+.process-history {
+  border: 1px solid var(--color-rule);
+  border-radius: 1rem;
+  background: var(--color-paper);
+  overflow: hidden;
+}
+
+.process-history > summary {
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.process-history > summary span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.process-history > summary svg {
+  width: 0.9rem;
+  color: var(--color-accent-deep);
+}
+
+.process-history > summary strong {
+  font-size: 0.72rem;
+}
+
+.process-history > summary small {
+  color: var(--color-muted);
+  font-size: 0.56rem;
+}
+
+.process-history > div {
+  border-top: 1px solid var(--color-rule);
+}
+
+.process-history article {
+  padding: 0.8rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.process-history article:last-child {
+  border-bottom: 0;
+}
+
+.process-history article div,
+.process-history article strong,
+.process-history article small {
+  display: block;
+}
+
+.process-history article strong {
+  font-size: 0.68rem;
+}
+
+.process-history article small,
+.process-history article > span {
+  color: var(--color-muted);
+  font-size: 0.54rem;
+}
+
+.process-loading {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.process-skeleton-main {
+  min-height: 12rem;
+  border-radius: 1.35rem;
+}
+
+.process-skeleton-card {
+  min-height: 28rem;
+  border-radius: 1.3rem;
+}
+
+.process-loading p {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--color-muted);
+  font-size: 0.65rem;
+}
+
+.process-loading p svg {
+  width: 0.9rem;
+}
+
+@keyframes process-card-in {
+  from { opacity: 0; transform: translateY(0.7rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (min-width: 42rem) {
+  .process-overview {
+    padding: 1.5rem;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.55fr);
+    align-items: end;
+  }
+
+  .process-card {
+    padding: 1.25rem;
+  }
+
+  .process-action-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .process-action-grid.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .process-withdraw > div {
+    grid-template-columns: minmax(12rem, 1fr) auto;
+    align-items: end;
+  }
+
+  .process-withdraw label {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 72rem) {
+  .process-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .process-card:only-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .process-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--color-accent) 42%, var(--color-rule));
+    box-shadow: 0 1.2rem 3rem color-mix(in srgb, var(--color-ink) 10%, transparent);
+  }
+
+  .process-action-grid button:hover,
+  .process-confirm button:hover,
+  .process-withdraw button:hover {
+    transform: translateY(-2px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .portal-content > *,
   .app-content > *,
@@ -3826,5 +4503,9 @@
   .profile-form :is(input, select, textarea),
   .portal-bottom-nav :is(a, button) {
     transition: none !important;
+  }
+
+  .process-card {
+    animation: none !important;
   }
 }
