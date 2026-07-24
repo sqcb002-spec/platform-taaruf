@@ -60,8 +60,8 @@ app.get("/api/public/avatar-config", asyncRoute(async (_req, res) => {
   const rows = await db.select({ key: platformSettings.key, value: platformSettings.value }).from(platformSettings).where(inArray(platformSettings.key, ["avatar.participant_male", "avatar.participant_female"]));
   const values = new Map(rows.map((row) => [row.key, row.value]));
   res.set("cache-control", "public, max-age=60, stale-while-revalidate=300").json({ data: {
-    participant_male: values.get("avatar.participant_male") ?? `${env.API_PUBLIC_URL}/uploads/avatars/pp_ikhwan.png`,
-    participant_female: values.get("avatar.participant_female") ?? `${env.API_PUBLIC_URL}/uploads/avatars/pp_akhwat.png`,
+    participant_male: values.get("avatar.participant_male") ?? `${env.DASHBOARD_ORIGIN}/avatars/pp_ikhwan.png`,
+    participant_female: values.get("avatar.participant_female") ?? `${env.DASHBOARD_ORIGIN}/avatars/pp_akhwat.png`,
   } });
 }));
 

@@ -237,9 +237,9 @@ function QueueModule({ section }: { section: string }) {
   return <section className="queue-card"><div className="queue-tools"><div className="queue-search"><Search /><input placeholder="Cari kode atau status…" /></div><button><Filter /> Filter</button></div><div className="data-table"><div className="data-row data-head"><span>Kode / proses</span><span>Status</span><span>Informasi utama</span><span>Tenggat</span><span /></div><div className="empty-queue"><Search /><h3>Belum ada data pada ruang ini.</h3><p>{section === "rekomendasi" ? "Rekomendasi muncul setelah seluruh biodata dan verifikasi disetujui." : "Item baru akan muncul otomatis ketika membutuhkan tindakan Anda."}</p></div></div></section>;
 }
 
-const questionSectionKeys = ["self", "religion", "marriage", "future", "partner_questions", "criteria_nonphysical", "references", "emotion", "lifestyle", "life_story", "education", "experience", "criteria_physical"] as const;
+const questionSectionKeys = ["self", "religion", "marriage", "future", "partner_questions", "criteria_nonphysical", "references", "emotion", "lifestyle", "life_story", "education", "experience", "family_details", "criteria_physical"] as const;
 const essentialQuestionKeys = ["self", "religion", "marriage", "future", "partner_questions", "criteria_nonphysical", "references"] as const;
-const optionalQuestionKeys = ["emotion", "lifestyle", "life_story", "education", "experience", "criteria_physical"] as const;
+const optionalQuestionKeys = ["emotion", "lifestyle", "life_story", "education", "experience", "family_details", "criteria_physical"] as const;
 
 function RequiredQuestions() {
   const { data: session } = authClient.useSession();
@@ -287,7 +287,7 @@ const biodataHubGroups = [
   { key: "marriage", title: "Pernikahan & harapan", description: "Kesiapan, visi keluarga, domisili, anak, dan keuangan.", sections: ["marriage", "future", "partner_questions"], optional: false },
   { key: "criteria_nonphysical", title: "Kriteria pasangan", description: "Batas utama terkait agama, karakter, status, dan domisili.", sections: ["criteria_nonphysical"], optional: false },
   { key: "references", title: "Referensi", description: "Tiga orang yang mengenal keseharian Anda.", sections: ["references"], optional: false },
-  { key: "lifestyle", title: "Tambahan kecocokan", description: "Emosi, pola hidup, pendidikan, pengalaman, dan preferensi fisik.", sections: ["emotion", "lifestyle", "life_story", "education", "experience", "criteria_physical"], optional: true },
+  { key: "lifestyle", title: "Tambahan kecocokan", description: "Emosi, pola hidup, pendidikan, keluarga, pengalaman, dan preferensi fisik.", sections: ["emotion", "lifestyle", "life_story", "education", "experience", "family_details", "criteria_physical"], optional: true },
 ] as const;
 
 function BiodataHub({ completed }: { completed: Set<string> }) {

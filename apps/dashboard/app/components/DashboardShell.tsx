@@ -136,7 +136,7 @@ export function DashboardShell({
               {summary && summary.stats.unreadNotifications > 0 ? <span /> : null}
             </Link>
             <button className="user-menu">
-              <img className="dashboard-avatar" src={avatarUrl} alt="" />
+              <img className="dashboard-avatar" src={avatarUrl} alt={user.role === "participant_female" ? "Avatar default akhwat" : "Avatar default ikhwan"} onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = `/avatars/${user.role === "participant_female" ? "pp_akhwat" : "pp_ikhwan"}.png`; }} />
               <div>
                 <strong>{user.name}</strong>
                 <small>{roleLabels[user.role]}</small>

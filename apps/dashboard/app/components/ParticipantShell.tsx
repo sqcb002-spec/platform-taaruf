@@ -121,7 +121,7 @@ export function ParticipantShell({ user, children }: { user: PortalUser; childre
           </Link>
           <details className="portal-profile">
             <summary>
-              <img className="portal-avatar" src={avatarUrl} alt="" />
+              <img className="portal-avatar" src={avatarUrl} alt={user.role === "participant_female" ? "Avatar default akhwat" : "Avatar default ikhwan"} onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = `/avatars/${user.role === "participant_female" ? "pp_akhwat" : "pp_ikhwan"}.png`; }} />
               <span className="portal-profile-copy"><strong>{user.name}</strong><small>{user.displayCode}</small></span>
               <ChevronDown aria-hidden="true" />
             </summary>
