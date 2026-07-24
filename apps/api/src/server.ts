@@ -15,7 +15,7 @@ import { allowedOrigins, env, googleOAuthEnabled } from "@/config";
 import { db } from "@/db/index";
 import { auditLogs, documents, jobs, moderationCases, notifications, platformSettings, profileSections, profiles, taarufProcesses, users } from "@/db/schema";
 import { decryptBuffer, decryptJson, encryptBuffer, encryptJson } from "@/lib/crypto";
-import { profileFormSections, sensitiveSectionKeys } from "@/lib/profile-form";
+import { profileFormSections, requiredProfileSectionKeys, sensitiveSectionKeys } from "@/lib/profile-form";
 import { getSession } from "@/session";
 
 const app = express();
@@ -109,11 +109,31 @@ app.get("/api/me", asyncRoute(async (req, res) => {
   if (session) res.json({ data: session });
 }));
 
+function resolveProfileSectionStatuses(rows: Array<{ key: string; status: string; answers: unknown; encryptedAnswers: string | null }>, role: string) {
+  return rows.map((row) => {
+    const definition = profileFormSections.find((item) => item.key === row.key);
+    if (!definition || ["profile", "identity"].includes(row.key)) return { key: row.key, status: row.status };
+    let answers = (row.answers ?? {}) as Record<string, unknown>;
+    if (row.encryptedAnswers) {
+      try { answers = decryptJson<Record<string, unknown>>(row.encryptedAnswers); } catch { answers = {}; }
+    }
+    const applicableFields = definition.fields.filter((field) => !field.visibleFor || field.visibleFor.includes(role as "participant_male" | "participant_female"));
+    const hasRequiredAnswers = applicableFields.every((field) => {
+      if (field.required === false) return true;
+      const answer = String(answers[field.name] ?? "").trim();
+      return Boolean(answer) && (field.type !== "textarea" || answer.length >= 10);
+    });
+    return { key: row.key, status: row.status === "complete" && hasRequiredAnswers ? "complete" : "draft" };
+  });
+}
+
 app.get("/api/dashboard/summary", asyncRoute(async (req, res) => {
   const session = await requireUser(req, res);
   if (!session) return;
   const isParticipant = session.user.role.startsWith("participant_");
-  const [profile] = isParticipant ? await db.select({ completionPercent: profiles.completionPercent }).from(profiles).where(eq(profiles.userId, session.user.id)).limit(1) : [];
+  const participantSections = isParticipant ? await db.select({ key: profileSections.key, status: profileSections.status, answers: profileSections.answers, encryptedAnswers: profileSections.encryptedAnswers }).from(profileSections).where(eq(profileSections.userId, session.user.id)) : [];
+  const currentSectionStatuses = resolveProfileSectionStatuses(participantSections, session.user.role);
+  const completionPercent = isParticipant ? Math.round((requiredProfileSectionKeys.filter((key) => currentSectionStatuses.some((row) => row.key === key && row.status === "complete")).length / requiredProfileSectionKeys.length) * 100) : 0;
   const role = session.user.role;
   const isAdmin = role === "admin_male" || role === "admin_female" || role === "super_admin";
   const activeStatuses = notInArray(taarufProcesses.status, ["married", "withdrawn", "expired", "closed"]);
@@ -166,7 +186,7 @@ app.get("/api/dashboard/summary", asyncRoute(async (req, res) => {
   res.json({
     data: {
       user: session.user,
-      completionPercent: profile?.completionPercent ?? 0,
+      completionPercent,
       stats: {
         verificationQueue: verificationQueue.value,
         activeProcesses: activeProcesses.value,
@@ -238,22 +258,7 @@ app.get("/api/profile/sections", asyncRoute(async (req, res) => {
     answers: profileSections.answers,
     encryptedAnswers: profileSections.encryptedAnswers,
   }).from(profileSections).where(eq(profileSections.userId, session.user.id));
-  const data = rows.map((row) => {
-    const definition = profileFormSections.find((item) => item.key === row.key);
-    if (!definition || ["profile", "identity"].includes(row.key)) return { key: row.key, status: row.status };
-    let answers = (row.answers ?? {}) as Record<string, unknown>;
-    if (row.encryptedAnswers) {
-      try { answers = decryptJson<Record<string, unknown>>(row.encryptedAnswers); } catch { answers = {}; }
-    }
-    const applicableFields = definition.fields.filter((field) => !field.visibleFor || field.visibleFor.includes(session.user.role as "participant_male" | "participant_female"));
-    const hasRequiredAnswers = applicableFields.every((field) => {
-      if (field.required === false) return true;
-      const answer = String(answers[field.name] ?? "").trim();
-      return Boolean(answer) && (field.type !== "textarea" || answer.length >= 10);
-    });
-    return { key: row.key, status: row.status === "complete" && hasRequiredAnswers ? "complete" : "draft" };
-  });
-  res.json({ data });
+  res.json({ data: resolveProfileSectionStatuses(rows, session.user.role) });
 }));
 
 app.get("/api/profile/sections/:section", asyncRoute(async (req, res) => {
@@ -289,7 +294,8 @@ app.put("/api/profile/core", asyncRoute(async (req, res) => {
   if (!parsed.success) return void res.status(400).json({ error: { code: "INVALID_PROFILE", message: "Semua field wajib diisi dengan format yang benar." } });
   const value = parsed.data;
   await db.update(users).set({ phone: value.phone, updatedAt: new Date() }).where(eq(users.id, session.user.id));
-  await db.insert(profiles).values({ userId: session.user.id, birthDate: value.birthDate, province: value.province, city: value.city, ethnicity: value.ethnicity, maritalStatus: value.maritalStatus, educationLevel: value.educationLevel, manhaj: value.manhaj, heightCm: value.heightCm, weightKg: value.weightKg, occupationField: value.occupation, completionPercent: 6 }).onConflictDoUpdate({ target: profiles.userId, set: { birthDate: value.birthDate, province: value.province, city: value.city, ethnicity: value.ethnicity, maritalStatus: value.maritalStatus, educationLevel: value.educationLevel, manhaj: value.manhaj, heightCm: value.heightCm, weightKg: value.weightKg, occupationField: value.occupation, completionPercent: 6, updatedAt: new Date() } });
+  const completionPercent = Math.round(100 / requiredProfileSectionKeys.length);
+  await db.insert(profiles).values({ userId: session.user.id, birthDate: value.birthDate, province: value.province, city: value.city, ethnicity: value.ethnicity, maritalStatus: value.maritalStatus, educationLevel: value.educationLevel, manhaj: value.manhaj, heightCm: value.heightCm, weightKg: value.weightKg, occupationField: value.occupation, completionPercent }).onConflictDoUpdate({ target: profiles.userId, set: { birthDate: value.birthDate, province: value.province, city: value.city, ethnicity: value.ethnicity, maritalStatus: value.maritalStatus, educationLevel: value.educationLevel, manhaj: value.manhaj, heightCm: value.heightCm, weightKg: value.weightKg, occupationField: value.occupation, completionPercent, updatedAt: new Date() } });
   const protectedIdentity = encryptJson(value);
   await db.insert(profileSections).values({ userId: session.user.id, key: "profile", status: "complete", answers: { fullNameProtected: true, gender: value.gender }, encryptedAnswers: protectedIdentity }).onConflictDoUpdate({ target: [profileSections.userId, profileSections.key], set: { status: "complete", answers: { fullNameProtected: true, gender: value.gender }, encryptedAnswers: protectedIdentity, updatedAt: new Date() } });
   await db.insert(auditLogs).values({ actorId: session.user.id, action: "profile.section.saved", targetType: "profile_section", targetId: "profile", metadata: { section: "profile" } });
@@ -334,8 +340,8 @@ app.put("/api/profile/sections/:section", asyncRoute(async (req, res) => {
   if (invalidRequiredAnswer) return void res.status(400).json({ error: { code: "INCOMPLETE_SECTION", message: "Lengkapi semua pertanyaan wajib. Jawaban uraian minimal 10 karakter." } });
   const sensitive = sensitiveSectionKeys.has(definition.key) || applicableFields.some((field) => field.sensitive);
   await db.insert(profileSections).values({ userId: session.user.id, key: definition.key, status: "complete", answers: sensitive ? { protected: true } : answers, encryptedAnswers: sensitive ? encryptJson(answers) : null }).onConflictDoUpdate({ target: [profileSections.userId, profileSections.key], set: { status: "complete", answers: sensitive ? { protected: true } : answers, encryptedAnswers: sensitive ? encryptJson(answers) : null, updatedAt: new Date() } });
-  const [completed] = await db.select({ value: count() }).from(profileSections).where(and(eq(profileSections.userId, session.user.id), eq(profileSections.status, "complete")));
-  const completionPercent = Math.min(100, Math.round((completed.value / profileFormSections.length) * 100));
+  const [completed] = await db.select({ value: count() }).from(profileSections).where(and(eq(profileSections.userId, session.user.id), eq(profileSections.status, "complete"), inArray(profileSections.key, [...requiredProfileSectionKeys])));
+  const completionPercent = Math.min(100, Math.round((completed.value / requiredProfileSectionKeys.length) * 100));
   await db.insert(profiles).values({ userId: session.user.id, completionPercent }).onConflictDoUpdate({ target: profiles.userId, set: { completionPercent, updatedAt: new Date() } });
   await db.insert(auditLogs).values({ actorId: session.user.id, action: "profile.section.saved", targetType: "profile_section", targetId: definition.key, metadata: { section: definition.key, protected: sensitive } });
   res.json({ data: { ok: true, completionPercent } });

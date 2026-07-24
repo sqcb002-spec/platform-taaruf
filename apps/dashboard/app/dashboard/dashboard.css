@@ -1664,25 +1664,66 @@
 .question-guidance span { display: inline-flex; align-items: center; gap: .38rem; }
 .question-guidance span::before { content: ""; width: .3rem; height: .3rem; border-radius: 50%; background: var(--color-accent); }
 .required-question-form .field-grid { grid-template-columns: 1fr; gap: .8rem; }
-.required-question-form .profile-field-group label {
+.field-group-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .75rem;
+}
+.field-group-heading h3 { margin: 0; }
+.field-group-heading small { color: var(--color-muted); font-size: .64rem; white-space: nowrap; }
+.profile-optional-group {
+  border: 1px solid var(--color-rule);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-paper-2) 72%, transparent);
+  overflow: hidden;
+  transition: border-color var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out);
+}
+.profile-optional-group[open] {
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-rule));
+  box-shadow: 0 .8rem 2rem rgb(20 32 48 / 5%);
+}
+.profile-optional-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4.25rem;
+  padding: .8rem 1rem;
+  cursor: pointer;
+  list-style: none;
+  transition: background-color var(--dur-short) var(--ease-out);
+}
+.profile-optional-group summary::-webkit-details-marker { display: none; }
+.profile-optional-group summary:hover { background: var(--color-cyan-soft); }
+.profile-optional-group summary span,
+.profile-optional-group summary strong,
+.profile-optional-group summary small { display: block; }
+.profile-optional-group summary strong { font-size: .78rem; }
+.profile-optional-group summary small { margin-top: .2rem; color: var(--color-muted); font-size: .62rem; line-height: 1.4; }
+.profile-optional-group summary svg { width: 1rem; flex: 0 0 auto; transition: transform var(--dur-short) var(--ease-out); }
+.profile-optional-group[open] summary svg { transform: rotate(90deg); }
+.profile-optional-group > .field-grid { padding: 0 .8rem .8rem; }
+.required-question-form :is(.profile-field-group, .profile-optional-group) label {
   padding: clamp(.85rem, 2vw, 1.1rem);
   border: 1px solid var(--color-rule);
   border-radius: .9rem;
   background: color-mix(in srgb, var(--color-paper) 88%, var(--color-paper-2));
   transition: border-color var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
 }
-.required-question-form .profile-field-group label:hover {
+.required-question-form :is(.profile-field-group, .profile-optional-group) label:hover {
   border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-rule));
   box-shadow: 0 .6rem 1.5rem rgb(20 32 48 / 5%);
   transform: translateY(-1px);
 }
-.required-question-form .profile-field-group label:focus-within {
+.required-question-form :is(.profile-field-group, .profile-optional-group) label:focus-within {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
-.required-question-form .profile-field-group label > span { font-size: .82rem; line-height: 1.55; }
-.required-question-form .profile-field-group label > small { display: none; }
-.required-question-form .profile-field-group label > small.answer-meta {
+.required-question-form :is(.profile-field-group, .profile-optional-group) label > span { font-size: .82rem; line-height: 1.55; }
+.required-question-form :is(.profile-field-group, .profile-optional-group) label > small { display: none; }
+.required-question-form :is(.profile-field-group, .profile-optional-group) label > small.answer-meta {
   display: block;
   color: var(--color-muted);
   font-size: .62rem;

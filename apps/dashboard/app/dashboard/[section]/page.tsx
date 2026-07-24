@@ -7,7 +7,7 @@ import { ArrowRight, BellRing, BookOpen, CalendarDays, Check, ChevronLeft, Chevr
 import { authClient } from "@/lib/auth-client";
 import { apiFetch, apiUrl } from "@/lib/api-client";
 import { navForRole, sectionCopy } from "@/lib/dashboard-config";
-import { profileFormSections } from "@/lib/profile-form";
+import { profileFormSections, type ProfileField } from "@/lib/profile-form";
 import { roleLabels, type AppRole } from "@/lib/roles";
 import { DocumentUpload } from "@/app/components/DocumentUpload";
 
@@ -146,25 +146,29 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
 
   if (definition.key === "identity") return <div className="profile-form"><div className="upload-grid"><DocumentUpload kind="identity_card" label="KTP untuk verifikasi (opsional sesuai kebijakan)" /><DocumentUpload kind="identity_selfie" label="Selfie verifikasi privat" />{role === "participant_male" ? <DocumentUpload kind="profile_photo" label="Foto untuk tahap nazhor (opsional)" maxSizeMb={2} allowWebp /> : null}</div><PrivacyNote /></div>;
 
-  const coreFields: Array<{ name: string; label: string; type?: "text" | "textarea" | "number" | "date" | "select"; options?: string[]; placeholder?: string; required?: boolean }> = [
+  const participantRole = role as "participant_male" | "participant_female";
+  const coreFields: ProfileField[] = [
     { name: "fullName", label: "Nama lengkap sesuai KTP" }, { name: "birthDate", label: "Tanggal lahir", type: "date" }, { name: "birthPlace", label: "Tempat lahir", placeholder: "Contoh: Jakarta" }, { name: "phone", label: "No. HP/WhatsApp", placeholder: "Contoh: 6281234567890" },
     { name: "province", label: "Provinsi", type: "select" }, { name: "city", label: "Kota/kabupaten", type: "select" }, { name: "district", label: "Kecamatan", type: "select" }, { name: "village", label: "Kelurahan/desa", type: "select" },
     { name: "originCity", label: "Kota asal", placeholder: "Contoh: Jakarta" }, { name: "maritalStatus", label: "Status pernikahan", type: "select", options: role === "participant_female" ? ["Lajang", "Janda cerai hidup", "Janda cerai mati"] : ["Lajang", "Duda cerai hidup", "Duda cerai mati"] }, { name: "marriageForm", label: "Bentuk pernikahan yang diharapkan", type: "select", options: role === "participant_female" ? ["Monogami / satu pasangan", "Bersedia dipoligami dengan syarat", "Perlu dibahas bersama wali"] : ["Monogami / satu pasangan", "Poligami sesuai kemampuan dan ketentuan", "Belum menentukan"] }, { name: "manhaj", label: "Manhaj", placeholder: "Contoh: Salaf / jelaskan dengan ringkas" }, { name: "ethnicity", label: "Suku", placeholder: "Contoh: Betawi" }, { name: "occupation", label: "Pekerjaan", placeholder: "Contoh: Software Engineer" },
     { name: "salaryRange", label: "Gaji per bulan", type: "select", options: ["Akan disampaikan saat proses ta’aruf", "Di bawah Rp3 juta", "Rp3–5 juta", "Rp5–7 juta", "Rp7–10 juta", "Di atas Rp10 juta"] }, { name: "educationLevel", label: "Pendidikan terakhir", type: "select", options: ["SMP", "SMA/SMK", "Diploma", "Sarjana", "Pascasarjana"] },
     { name: "quranReading", label: "Kemampuan baca Al-Qur’an", type: "select", options: ["Belum lancar", "Cukup", "Fasih"] }, { name: "quranMemorization", label: "Hafalan Al-Qur’an", type: "select", options: ["Belum ada", "Juz 30", "1–3 juz", "4–7 juz", "8–10 juz", "Lebih dari 10 juz"] },
     { name: "prayer", label: "Shalat wajib", type: "select", options: ["Menjaga 5 waktu", "Kadang terlewat", "Sedang memperbaiki"] }, { name: "studyFrequency", label: "Kajian per minggu", type: "select", options: ["Belum rutin", "1 kali", "2–3 kali", "Lebih dari 3 kali"] },
-    { name: "music", label: "Preferensi musik", type: "select", options: ["Tidak", "Ya, sesekali", "Ya, rutin"] }, { name: "smoking", label: "Merokok", type: "select", options: ["Tidak", "Ya"] }, { name: "widowMarriage", label: "Bersedia menikah dengan duda/janda", type: "select", options: ["Ya", "Tidak", "Akan dibahas bersama keluarga"] },
+    { name: "music", label: "Preferensi musik", type: "select", options: ["Tidak", "Ya, sesekali", "Ya, rutin"] }, { name: "smoking", label: "Merokok", type: "select", options: ["Tidak", "Ya"] }, { name: "widowMarriage", label: role === "participant_female" ? "Bersedia menikah dengan duda?" : "Bersedia menikah dengan janda?", type: "select", options: ["Ya", "Tidak", "Akan dibahas bersama keluarga"] },
   ];
   const fields = definition.key === "profile" ? coreFields : definition.fields.filter((field) => !field.visibleFor || field.visibleFor.includes(role as "participant_male" | "participant_female"));
   const isAdvancedSection = !["profile", "physical", "family"].includes(definition.key);
   const fieldGroups = definition.key === "profile" ? [
-    { title: "Informasi dasar", fields: fields.slice(0, 4) },
-    { title: "Domisili", fields: fields.slice(4, 9) },
-    { title: "Status & latar belakang", fields: fields.slice(9, 13) },
-    { title: "Pekerjaan & pendidikan", fields: fields.slice(13, 16) },
-    { title: "Ibadah dasar", fields: fields.slice(16, 20) },
-    { title: "Preferensi pribadi", fields: fields.slice(20) },
-  ].filter((group) => group.fields.length > 0) : [{ title: "", fields }];
+    { title: "Informasi dasar", fields: fields.slice(0, 4), optional: false },
+    { title: "Domisili", fields: fields.slice(4, 9), optional: false },
+    { title: "Status & latar belakang", fields: fields.slice(9, 13), optional: false },
+    { title: "Pekerjaan & pendidikan", fields: fields.slice(13, 16), optional: false },
+    { title: "Ibadah dasar", fields: fields.slice(16, 20), optional: false },
+    { title: "Preferensi pribadi", fields: fields.slice(20), optional: false },
+  ].filter((group) => group.fields.length > 0) : isAdvancedSection ? [
+    { title: "Wajib dijawab", fields: fields.filter((field) => field.required !== false), optional: false },
+    { title: "Tambahan untuk kecocokan", fields: fields.filter((field) => field.required === false), optional: true },
+  ].filter((group) => group.fields.length > 0) : [{ title: "", fields, optional: false }];
   const placeholders: Record<string, string> = {
     fullName: "Contoh: Ahmad Fauzan",
     birthDate: "Pilih tanggal lahir",
@@ -185,10 +189,31 @@ function ProfileForm({ sectionKey, role, onSaved }: { sectionKey: string; role: 
     medicalHistory: "Kosongkan jika tidak ada",
   };
   const placeholderFor = (name: string, type?: string) => placeholders[name] ?? (type === "textarea" ? "Tuliskan jawaban Anda secara ringkas…" : "Tulis jawaban Anda…");
+  function renderField(field: ProfileField, fieldIndex: number) {
+    const id = `${definition.key}-${field.name}`;
+    const fieldLabel = field.labelFor?.[participantRole] ?? field.label;
+    const placeholder = field.placeholder ?? placeholderFor(field.name, field.type);
+    const regionKey = field.name === "province" ? "provinces" : field.name === "city" ? "regencies" : field.name === "district" ? "districts" : field.name === "village" ? "villages" : null;
+    const configuredOptions = field.optionsFor?.[participantRole] ?? field.options ?? [];
+    const options: RegionItem[] = regionKey ? regions[regionKey] : configuredOptions.map((name) => ({ code: name, name }));
+    const disabled = field.name === "city" ? !locationValues.province : field.name === "district" ? !locationValues.city : field.name === "village" ? !locationValues.district : false;
+    const rawSavedValue = String(initialValues[field.name] ?? "");
+    const savedValue = field.name === "birthDate" && rawSavedValue ? rawSavedValue.slice(0, 10) : rawSavedValue;
+    const isRequired = field.required !== false;
+    return <label key={field.name} htmlFor={id}>
+      <span>{isAdvancedSection ? <b className="question-number">No. {String(fieldIndex + 1).padStart(2, "0")}</b> : null}{fieldLabel} {isRequired ? <em>*</em> : null}</span>
+      {field.type === "textarea" ? <textarea id={id} name={field.name} rows={4} required={isRequired} minLength={isAdvancedSection && isRequired ? 10 : undefined} defaultValue={savedValue} placeholder={placeholder} aria-describedby={`${id}-hint`} /> : field.type === "select" ? <select id={id} name={field.name} required={isRequired} value={regionKey ? locationValues[field.name as keyof typeof locationValues] : undefined} defaultValue={regionKey ? undefined : savedValue} disabled={disabled} onChange={regionKey ? (event) => { const selected = options.find((option) => option.name === event.target.value); selectLocation(field.name as "province" | "city" | "district" | "village", event.target.value, selected?.code); } : undefined}><option value="" disabled={isRequired}>{regionLoading && regionKey ? "Memuat wilayah…" : disabled ? "Pilih wilayah di atas dulu" : placeholder}</option>{options.map((option) => <option key={option.code} value={option.name}>{option.name}</option>)}</select> : <input id={id} name={field.name} type={field.type ?? "text"} min={field.name === "heightCm" ? 120 : field.name === "weightKg" ? 30 : undefined} max={field.name === "heightCm" ? 230 : field.name === "weightKg" ? 250 : undefined} required={isRequired} defaultValue={savedValue} placeholder={placeholder} aria-describedby={`${id}-hint`} />}
+      <small id={`${id}-hint`} className={isAdvancedSection && field.type === "textarea" ? "answer-meta" : undefined}>{isAdvancedSection && field.type === "textarea" ? `${characterCounts[field.name] ?? savedValue.length} karakter • akan tersimpan otomatis` : isRequired ? "Wajib diisi" : "Opsional"}</small>
+    </label>;
+  }
 
   return <form key={Object.keys(initialValues).length} className="profile-form" onSubmit={submit} onInput={isAdvancedSection ? scheduleDraft : undefined}>
     {definition.key === "profile" ? <input type="hidden" name="gender" value={role === "participant_female" ? "Akhwat" : "Ikhwan"} /> : null}
-    <div className="profile-field-groups">{fieldGroups.map((group) => <section className="profile-field-group" key={group.title || definition.key}>{group.title ? <h3>{group.title}</h3> : null}<div className="field-grid">{group.fields.map((field, fieldIndex) => { const id = `${definition.key}-${field.name}`; const placeholder = ("placeholder" in field ? field.placeholder : undefined) ?? placeholderFor(field.name, field.type); const regionKey = field.name === "province" ? "provinces" : field.name === "city" ? "regencies" : field.name === "district" ? "districts" : field.name === "village" ? "villages" : null; const options: RegionItem[] = regionKey ? regions[regionKey] : (field.options ?? []).map((name) => ({ code: name, name })); const disabled = field.name === "city" ? !locationValues.province : field.name === "district" ? !locationValues.city : field.name === "village" ? !locationValues.district : false; const rawSavedValue = String(initialValues[field.name] ?? ""); const savedValue = field.name === "birthDate" && rawSavedValue ? rawSavedValue.slice(0, 10) : rawSavedValue; const isRequired = field.required !== false; return <label key={field.name} htmlFor={id}><span>{isAdvancedSection ? <b className="question-number">No. {String(fieldIndex + 1).padStart(2, "0")}</b> : null}{field.label} {isRequired ? <em>*</em> : null}</span>{field.type === "textarea" ? <textarea id={id} name={field.name} rows={4} required={isRequired} minLength={isAdvancedSection && isRequired ? 10 : undefined} defaultValue={savedValue} placeholder={placeholder} aria-describedby={`${id}-hint`} /> : field.type === "select" ? <select id={id} name={field.name} required={isRequired} value={regionKey ? locationValues[field.name as keyof typeof locationValues] : undefined} defaultValue={regionKey ? undefined : savedValue} disabled={disabled} onChange={regionKey ? (event) => { const selected = options?.find((option) => option.name === event.target.value); selectLocation(field.name as "province" | "city" | "district" | "village", event.target.value, selected?.code); } : undefined}><option value="" disabled={isRequired}>{regionLoading && regionKey ? "Memuat wilayah…" : disabled ? "Pilih wilayah di atas dulu" : placeholder}</option>{options?.map((option) => <option key={option.code} value={option.name}>{option.name}</option>)}</select> : <input id={id} name={field.name} type={field.type ?? "text"} min={field.name === "heightCm" ? 120 : field.name === "weightKg" ? 30 : undefined} max={field.name === "heightCm" ? 230 : field.name === "weightKg" ? 250 : undefined} required={isRequired} defaultValue={savedValue} placeholder={placeholder} aria-describedby={`${id}-hint`} />}<small id={`${id}-hint`} className={isAdvancedSection && field.type === "textarea" ? "answer-meta" : undefined}>{isAdvancedSection && field.type === "textarea" ? `${characterCounts[field.name] ?? savedValue.length} karakter • akan tersimpan otomatis` : isRequired ? "Wajib diisi" : "Opsional"}</small></label>; })}</div></section>)}</div>
+    <div className="profile-field-groups">{fieldGroups.map((group) => {
+      const fieldsContent = <div className="field-grid">{group.fields.map(renderField)}</div>;
+      if (group.optional) return <details className="profile-optional-group" key={group.title}><summary><span><strong>{group.title}</strong><small>{group.fields.length} pertanyaan opsional untuk membantu pencocokan</small></span><ChevronRight /></summary>{fieldsContent}</details>;
+      return <section className="profile-field-group" key={group.title || definition.key}>{group.title ? <div className="field-group-heading"><h3>{group.title}</h3>{isAdvancedSection ? <small>{group.fields.length} pertanyaan inti</small> : null}</div> : null}{fieldsContent}</section>;
+    })}</div>
     {definition.key === "physical" && role === "participant_male" ? <div className="upload-grid physical-selfie-upload"><DocumentUpload kind="profile_photo" label="Foto terbaru (opsional)" maxSizeMb={2} allowWebp /><p className="field-note">Foto disimpan privat dan hanya dapat dibuka sesuai persetujuan serta tahap proses.</p></div> : null}
     {isAdvancedSection ? <p className={`form-autosave ${state}`} aria-live="polite"><span />{state === "drafting" ? "Menunggu Anda selesai mengetik…" : state === "drafted" ? "Draft tersimpan otomatis" : state === "draft-error" ? "Draft belum tersimpan—periksa koneksi" : "Jawaban disimpan otomatis 1,5 detik setelah Anda berhenti mengetik"}</p> : null}
     <label className="form-attestation"><input type="checkbox" name="_attestation" required /><span>Saya menyatakan data pada bagian ini benar dan dapat dipertanggungjawabkan.</span></label>
@@ -212,7 +237,9 @@ function QueueModule({ section }: { section: string }) {
   return <section className="queue-card"><div className="queue-tools"><div className="queue-search"><Search /><input placeholder="Cari kode atau status…" /></div><button><Filter /> Filter</button></div><div className="data-table"><div className="data-row data-head"><span>Kode / proses</span><span>Status</span><span>Informasi utama</span><span>Tenggat</span><span /></div><div className="empty-queue"><Search /><h3>Belum ada data pada ruang ini.</h3><p>{section === "rekomendasi" ? "Rekomendasi muncul setelah seluruh biodata dan verifikasi disetujui." : "Item baru akan muncul otomatis ketika membutuhkan tindakan Anda."}</p></div></div></section>;
 }
 
-const requiredQuestionKeys = ["self", "emotion", "lifestyle", "life_story", "education", "experience", "religion", "marriage", "future", "partner_questions", "criteria_physical", "criteria_nonphysical", "references"] as const;
+const questionSectionKeys = ["self", "religion", "marriage", "future", "partner_questions", "criteria_nonphysical", "references", "emotion", "lifestyle", "life_story", "education", "experience", "criteria_physical"] as const;
+const essentialQuestionKeys = ["self", "religion", "marriage", "future", "partner_questions", "criteria_nonphysical", "references"] as const;
+const optionalQuestionKeys = ["emotion", "lifestyle", "life_story", "education", "experience", "criteria_physical"] as const;
 
 function RequiredQuestions() {
   const { data: session } = authClient.useSession();
@@ -220,15 +247,17 @@ function RequiredQuestions() {
   const router = useRouter();
   const role = (session?.user as ({ role?: AppRole } | undefined))?.role;
   const requestedTopic = searchParams.get("topik");
-  const [topic, setTopic] = useState<typeof requiredQuestionKeys[number]>(() => requiredQuestionKeys.includes(requestedTopic as typeof requiredQuestionKeys[number]) ? requestedTopic as typeof requiredQuestionKeys[number] : "self");
+  const [topic, setTopic] = useState<typeof questionSectionKeys[number]>(() => questionSectionKeys.includes(requestedTopic as typeof questionSectionKeys[number]) ? requestedTopic as typeof questionSectionKeys[number] : "self");
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [onboardingReady, setOnboardingReady] = useState<boolean | null>(null);
   const [message, setMessage] = useState("");
   const definition = profileFormSections.find((item) => item.key === topic)!;
-  const topicIndex = requiredQuestionKeys.indexOf(topic);
-  const previousTopic = topicIndex > 0 ? requiredQuestionKeys[topicIndex - 1] : null;
-  const nextTopic = topicIndex < requiredQuestionKeys.length - 1 ? requiredQuestionKeys[topicIndex + 1] : null;
-  const completedCount = requiredQuestionKeys.filter((key) => completed.has(key)).length;
+  const isOptionalTopic = optionalQuestionKeys.includes(topic as typeof optionalQuestionKeys[number]);
+  const flowKeys = isOptionalTopic ? optionalQuestionKeys : essentialQuestionKeys;
+  const topicIndex = flowKeys.indexOf(topic as never);
+  const previousTopic = topicIndex > 0 ? flowKeys[topicIndex - 1] : null;
+  const nextTopic = topicIndex < flowKeys.length - 1 ? flowKeys[topicIndex + 1] : null;
+  const completedCount = essentialQuestionKeys.filter((key) => completed.has(key)).length;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -237,28 +266,28 @@ function RequiredQuestions() {
   }, []);
 
   useEffect(() => {
-    if (requiredQuestionKeys.includes(requestedTopic as typeof requiredQuestionKeys[number])) setTopic(requestedTopic as typeof requiredQuestionKeys[number]);
+    if (questionSectionKeys.includes(requestedTopic as typeof questionSectionKeys[number])) setTopic(requestedTopic as typeof questionSectionKeys[number]);
   }, [requestedTopic]);
 
   if (onboardingReady === false) return <section className="dashboard-card required-questions-locked"><ShieldCheck /><div><h2>Selesaikan biodata dasar terlebih dahulu.</h2><p>Pertanyaan wajib dibuka setelah tiga tahap onboarding selesai. Jawaban dasar membantu pertanyaan ini dibaca dalam konteks yang benar.</p><Link href="/dashboard/biodata" className="app-primary" prefetch={false}>Lanjutkan onboarding <ArrowRight /></Link></div></section>;
   return <section className="required-questions-layout">
     <div className="advanced-topic-bar">
       <Link href="/dashboard/biodata" prefetch={false}><ChevronLeft /> Semua bagian</Link>
-      <div><span>{completedCount} dari {requiredQuestionKeys.length} bagian selesai</span><i><b style={{ width: `${Math.round((completedCount / requiredQuestionKeys.length) * 100)}%` }} /></i></div>
+      <div><span>{completedCount} dari {essentialQuestionKeys.length} bagian wajib selesai</span><i><b style={{ width: `${Math.round((completedCount / essentialQuestionKeys.length) * 100)}%` }} /></i></div>
       <nav aria-label="Pindah bagian biodata"><span className={!previousTopic ? "disabled" : ""}>{previousTopic ? <Link href={`/dashboard/pertanyaan-wajib?topik=${previousTopic}`} prefetch={false} aria-label="Bagian sebelumnya">←</Link> : "←"}</span><span className={!nextTopic ? "disabled" : ""}>{nextTopic ? <Link href={`/dashboard/pertanyaan-wajib?topik=${nextTopic}`} prefetch={false} aria-label="Bagian berikutnya">→</Link> : "→"}</span></nav>
     </div>
-    <section className="form-card required-question-form"><header><div><p className="mono">BAGIAN {topicIndex + 1} DARI {requiredQuestionKeys.length}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header><div className="question-guidance"><span>Jawaban uraian minimal 10 karakter</span><span>Draft tersimpan otomatis setelah 1,5 detik</span></div>{message ? <p className="form-error" role="alert">{message}</p> : null}{role ? <ProfileForm sectionKey={topic} role={role} onSaved={() => { setCompleted((value) => new Set(value).add(topic)); router.push(nextTopic ? `/dashboard/pertanyaan-wajib?topik=${nextTopic}` : "/dashboard/biodata"); }} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section>
+    <section className="form-card required-question-form"><header><div><p className="mono">{isOptionalTopic ? "TAMBAHAN OPSIONAL" : `BAGIAN ${topicIndex + 1} DARI ${essentialQuestionKeys.length}`}</p><h2>{definition.label}</h2><p>{definition.description}</p></div></header><div className="question-guidance"><span>{isOptionalTopic ? "Boleh dilewati atau diisi sebagian" : "Hanya pertanyaan inti yang wajib dijawab"}</span><span>Draft tersimpan otomatis setelah 1,5 detik</span></div>{message ? <p className="form-error" role="alert">{message}</p> : null}{role ? <ProfileForm sectionKey={topic} role={role} onSaved={() => { setCompleted((value) => new Set(value).add(topic)); router.push(!isOptionalTopic && nextTopic ? `/dashboard/pertanyaan-wajib?topik=${nextTopic}` : "/dashboard/biodata"); }} /> : <div className="dashboard-loading"><LoaderCircle className="spin" /></div>}</section>
   </section>;
 }
 
 const biodataHubGroups = [
   { key: "identity", title: "Foto & verifikasi", description: "Dokumen dan foto privat untuk pemeriksaan admin.", sections: ["identity"], optional: true },
-  { key: "self", title: "Diri & karakter", description: "Gambaran diri, emosi, pola hidup, dan pengalaman penting.", sections: ["self", "emotion", "lifestyle", "life_story"], optional: false },
-  { key: "education", title: "Pendidikan & pengalaman", description: "Riwayat belajar, kerja, organisasi, dakwah, dan sosial.", sections: ["education", "experience"], optional: false },
+  { key: "self", title: "Diri & karakter", description: "Kelebihan, kekurangan, target hidup, dan batas penting.", sections: ["self"], optional: false },
   { key: "religion", title: "Ibadah & pemahaman", description: "Kebiasaan ibadah, aqidah, dan manhaj untuk review manual.", sections: ["religion"], optional: false },
   { key: "marriage", title: "Pernikahan & harapan", description: "Kesiapan, visi keluarga, domisili, anak, dan keuangan.", sections: ["marriage", "future", "partner_questions"], optional: false },
-  { key: "criteria_physical", title: "Kriteria pasangan", description: "Kriteria fisik dan nonfisik yang wajar serta terukur.", sections: ["criteria_physical", "criteria_nonphysical"], optional: false },
+  { key: "criteria_nonphysical", title: "Kriteria pasangan", description: "Batas utama terkait agama, karakter, status, dan domisili.", sections: ["criteria_nonphysical"], optional: false },
   { key: "references", title: "Referensi", description: "Tiga orang yang mengenal keseharian Anda.", sections: ["references"], optional: false },
+  { key: "lifestyle", title: "Tambahan kecocokan", description: "Emosi, pola hidup, pendidikan, pengalaman, dan preferensi fisik.", sections: ["emotion", "lifestyle", "life_story", "education", "experience", "criteria_physical"], optional: true },
 ] as const;
 
 function BiodataHub({ completed }: { completed: Set<string> }) {
@@ -272,7 +301,7 @@ function BiodataHub({ completed }: { completed: Set<string> }) {
         const pending = group.sections.find((key) => !completed.has(key));
         const done = !group.optional && !pending;
         const href = group.key === "identity" ? "/dashboard/biodata?bagian=identity" : `/dashboard/pertanyaan-wajib?topik=${pending ?? group.sections[0]}`;
-        return <Link href={href} prefetch={false} key={group.key} className={done ? "complete" : ""}><span>{done ? <Check /> : String(index + 1).padStart(2, "0")}</span><div><strong>{group.title}</strong><p>{group.description}</p><small>{group.optional ? "Opsional & privat" : done ? "Selesai" : `${group.sections.filter((key) => completed.has(key)).length}/${group.sections.length} topik selesai`}</small></div><ChevronRight /></Link>;
+        return <Link href={href} prefetch={false} key={group.key} className={done ? "complete" : ""}><span>{done ? <Check /> : String(index + 1).padStart(2, "0")}</span><div><strong>{group.title}</strong><p>{group.description}</p><small>{group.optional ? group.key === "identity" ? "Opsional & privat" : "Opsional • bantu hasil lebih cocok" : done ? "Selesai" : `${group.sections.filter((key) => completed.has(key)).length}/${group.sections.length} topik selesai`}</small></div><ChevronRight /></Link>;
       })}
     </div>
     <div className="biodata-hub-actions"><Link href="/dashboard/biodata?bagian=profile" className="app-secondary" prefetch={false}>Edit data dasar</Link><Link href={`/dashboard/pertanyaan-wajib?topik=${requiredSections.find((key) => !completed.has(key)) ?? "self"}`} className="app-primary" prefetch={false}>Lanjutkan bagian berikutnya <ArrowRight /></Link></div>
